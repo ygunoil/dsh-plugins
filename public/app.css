@@ -127,6 +127,12 @@ h2 { margin: 0 0 12px; font-size: 18px; }
 }
 .add-banner div { display: grid; gap: 3px; min-width: 0; }
 .add-banner b { color: white; letter-spacing: 0.14em; white-space: nowrap; }
+.add-banner .banner-cmds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
 .add-banner code {
   flex: 0 0 auto;
   overflow: hidden;
@@ -363,11 +369,13 @@ h2 { margin: 0 0 12px; font-size: 18px; }
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
+.card-add .add-btns { display: flex; gap: 6px; flex: 0 0 auto; }
 .card-add .btn {
   padding: 6px 10px;
   white-space: nowrap;
   box-shadow: 0 0 18px rgba(77, 107, 254, 0.45);
 }
+.card-add .btn-ghost { box-shadow: none; background: rgba(7, 11, 20, 0.55); }
 .card .view { margin-left: auto; color: var(--blue-2); font-size: 12px; }
 .card header, .card footer, .install, .split, .actions, .pager, .list article {
   display: flex;
@@ -493,10 +501,21 @@ mark { background: rgba(77, 107, 254, 0.45); color: white; border-radius: 4px; p
 .detail-page .side { position: sticky; top: calc(var(--top-h, 68px) + 16px); }
 .detail-page h1 { font-size: 32px; }
 .install-title { margin: 18px 0 8px; color: var(--blue-2); font-size: 13px; letter-spacing: 0.12em; }
+.install-pair { display: grid; gap: 8px; margin: 0 0 12px; }
+.install-pair .install { margin: 0; }
+.install-tag {
+  flex: 0 0 auto;
+  min-width: 62px;
+  color: var(--blue-2);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+}
 .detail-page .install {
   margin: 0 0 12px;
   background: linear-gradient(90deg, rgba(77, 107, 254, 0.18), transparent 46%), #0c1426;
 }
+.detail-page .install-pair .install { margin: 0; }
 .detail-page .how {
   margin: 0;
   padding: 0;
