@@ -23,6 +23,7 @@ import {
   catalogListKey,
 } from "./catalog.js?v=20261028d";
 import { readPackageJson } from "./zip.js?v=20261027";
+import { mountWhale } from "./whale.js?v=20261028y";
 
 const app = document.querySelector("#app");
 const state = { q: "", cat: "", src: 0, level: 0, sort: "stars", page: 1 };
@@ -469,10 +470,7 @@ async function renderMarket(my) {
   if (my !== token) return;
   app.innerHTML = `<section class="page">
     <section class="stage">
-      <svg class="stage-mark" viewBox="0 0 64 64" aria-hidden="true">
-        <path fill="currentColor" d="M8 40c7-14 20-18 32-9 5 3 9 2 14-4-3 10-8 12-13 14 6 2 8 7 6 12-8-2-13-1-18 4-9 2-20-3-21-17z"/>
-        <circle cx="42" cy="29" r="2.2" fill="#fff"/>
-      </svg>
+      <canvas class="stage-whale" id="stage-whale" aria-hidden="true"></canvas>
       <h1>插件目录</h1>
       <p class="stage-line">给 DeepSeek Harness 找插件</p>
       <form class="seek" id="seek-form">
@@ -511,6 +509,7 @@ async function renderMarket(my) {
     </div>
     </div>
   </section>`;
+  mountWhale(document.getElementById("stage-whale"));
   const catInput = document.getElementById("cat-q");
   catInput.value = catQuery;
   catInput.addEventListener("input", (event) => {
