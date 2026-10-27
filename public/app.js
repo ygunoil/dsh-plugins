@@ -144,8 +144,10 @@ function navKey(path) {
 }
 
 function syncSearch() {
-  const input = document.getElementById("top-q");
-  if (input && input.value !== state.q) input.value = state.q;
+  for (const id of ["top-q", "seek-q"]) {
+    const input = document.getElementById(id);
+    if (input && input.value !== state.q) input.value = state.q;
+  }
   const clear = document.getElementById("top-clear");
   if (clear) clear.hidden = !state.q;
 }
@@ -388,6 +390,18 @@ function categoryHit() {
   return (getManifest()?.categories || []).find(([id]) => id !== "other" && (id === needle || catLabel(id).toLowerCase() === needle)) || null;
 }
 
+function paintHot() {
+  const root = document.getElementById("hot-tags");
+  if (!root) return;
+  const q = state.q.trim().toLowerCase();
+  const tags = (getManifest()?.categories || []).filter(([id]) => id && id !== "other").slice(0, 21);
+  root.innerHTML = tags.map(([id]) => {
+    const label = catLabel(id);
+    const on = q === label.toLowerCase() || q === String(id).toLowerCase();
+    return `<button type="button" class="hot${on ? " is-on" : ""}" data-act="hot" data-q="${esc(label)}" aria-pressed="${on ? "true" : "false"}">${esc(label)}</button>`;
+  }).join("");
+}
+
 function paintResults() {
   const root = document.getElementById("results");
   if (!root) return;
@@ -396,7 +410,9 @@ function paintResults() {
   const filtered = filterPlugins(base, state);
   const { page, pages, slice } = currentPage(filtered);
   const loading = !isLoaded() && state.src !== 32;
-  const filtering = Boolean(state.q.trim() || state.cat || state.src || state.level || (state.sort && state.sort !== "stars"));
+  const queryLabel = state.q.trim();
+  const extra = Boolean(state.cat || state.src || state.level || (state.sort && state.sort !== "stars"));
+  const filtering = Boolean(queryLabel || extra);
   const catName = state.cat ? catLabel(state.cat) : "";
   const hit = categoryHit();
   const suggest = hit && hit[0] !== state.cat
@@ -404,13 +420,17 @@ function paintResults() {
     : "";
   const progress = loading
     ? `已载入 ${num(getItems().length)} / ${num(manifest?.total)}`
-    : `${catName ? `${catName} · ` : ""}${num(filtered.length)} 条${state.q.trim() ? " · 相关的排在前面" : ""}`;
+    : queryLabel
+      ? `搜索：${esc(queryLabel)}${catName ? ` · ${esc(catName)}` : ""}　共 ${num(filtered.length)} 条结果`
+      : `${catName ? `${esc(catName)} · ` : ""}${num(filtered.length)} 条`;
   const empty = loading ? "正在载入目录…" : `没有匹配的插件。${filtering ? "可以清除条件后再找。" : ""}`;
-  const clear = filtering ? `<button type="button" class="text-btn" data-act="reset">清除条件</button>` : "";
-  root.innerHTML = `<div class="result-bar"><span>${progress}</span><span>${suggest}${clear}第 ${num(page)} / ${num(pages)} 页</span></div>
+  const cancelQ = queryLabel ? `<button type="button" class="text-btn" data-act="clear-q">取消</button>` : "";
+  const clear = extra ? `<button type="button" class="text-btn" data-act="reset">清除条件</button>` : "";
+  root.innerHTML = `<div class="result-bar"><span>${progress}</span><span class="result-actions">${suggest}${cancelQ}${clear}<span>第 ${num(page)} / ${num(pages)} 页</span></span></div>
     <div class="grid">${slice.map(card).join("") || `<p class="empty">${empty}</p>`}</div>
     ${pager(page, pages)}`;
   renderedListKey = stateListKey();
+  paintHot();
 }
 
 async function loadLocalRows() {
@@ -433,6 +453,13 @@ async function renderMarket(my) {
       <h1>插件目录</h1>
       <p class="muted" id="catalog-note">${catalogNote(manifest)}</p>
     </div>
+    <form class="seek" id="seek-form">
+      <label class="seek-box">
+        <input id="seek-q" type="search" placeholder="搜索插件，例如：浏览器、Git、金融、桌面…" autocomplete="off" aria-label="搜索插件" enterkeyhint="search">
+      </label>
+      <button class="btn" type="submit">搜索</button>
+    </form>
+    <div class="hot-row" id="hot-tags" aria-label="热门搜索"></div>
     <div class="add-banner">
       <div><b>在终端添加到 DSH</b><span>Web 和 Desktop 各装各的，网页不会安装。Desktop 要先打开一次，完全退出后再执行，然后重新打开。</span></div>
       <div class="banner-cmds">
@@ -476,6 +503,21 @@ async function renderMarket(my) {
     event.preventDefault();
     const first = [...document.querySelectorAll("#cat-body [data-cat-item]:not([hidden])")].find((item) => item.dataset.cat);
     if (first) first.click();
+  });
+  const seek = document.getElementById("seek-q");
+  seek.value = state.q;
+  seek.addEventListener("compositionstart", () => { composing = true; });
+  seek.addEventListener("compositionend", (event) => {
+    composing = false;
+    applyQuery(event.target.value);
+  });
+  seek.addEventListener("input", (event) => {
+    if (composing) return;
+    applyQuery(event.target.value);
+  });
+  document.getElementById("seek-form").addEventListener("submit", (event) => {
+    event.preventDefault();
+    applyQuery(seek.value.trim(), true);
   });
   paintCats();
   paintFilters();
@@ -1144,6 +1186,12 @@ document.body.addEventListener("click", async (event) => {
     event.preventDefault();
     document.querySelector(".readme")?.classList.remove("is-clipped");
     button.remove();
+  }
+  if (act === "hot") {
+    event.preventDefault();
+    const next = button.dataset.q || "";
+    const same = state.q.trim().toLowerCase() === next.toLowerCase();
+    applyQuery(same ? "" : next, true);
   }
   if (act === "clear-q") {
     event.preventDefault();
