@@ -1,0 +1,16 @@
+{
+  "name": "dsh-plugins",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "DeepSeek Harness 插件社区目录：五个来源去重、检索、下载、本机登录",
+  "scripts": {
+    "start": "node server.js",
+    "build": "node scripts/build-site.mjs",
+    "test": "node --test",
+    "pack:example": "node scripts/pack-example.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "dsh-hello-community",
+  "version": "0.1.0",
+  "description": "用来试用 DSH Plugins 社区上传和下载的示例包，不要装进正在使用的 profile。",
+  "license": "MIT",
+  "main": "./lib/index.js",
+  "keywords": ["dsh-plugin", "example"],
+  "dsh": {
+    "plugin": true,
+    "kind": "example",
+    "bundle": { "patch": "./cordis.patch.yml" }
+  }
+}

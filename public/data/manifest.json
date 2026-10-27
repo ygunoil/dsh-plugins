@@ -1,0 +1,424 @@
+{
+  "builtAt": "2026-10-26T10:44:27.582Z",
+  "total": 26237,
+  "fields": [
+    "id",
+    "name",
+    "desc",
+    "stars",
+    "cat",
+    "repo",
+    "npm",
+    "ver",
+    "install",
+    "src",
+    "level",
+    "risk",
+    "health",
+    "downloads",
+    "lang",
+    "dsh",
+    "page"
+  ],
+  "shards": [
+    "data/shard-00.json",
+    "data/shard-01.json",
+    "data/shard-02.json",
+    "data/shard-03.json",
+    "data/shard-04.json",
+    "data/shard-05.json",
+    "data/shard-06.json",
+    "data/shard-07.json",
+    "data/shard-08.json",
+    "data/shard-09.json",
+    "data/shard-10.json",
+    "data/shard-11.json",
+    "data/shard-12.json",
+    "data/shard-13.json"
+  ],
+  "featured": [
+    [
+      "r~morluto~rea",
+      "rea",
+      "Reverse engineer anything with agents, from app behavior down to native binaries.",
+      385796,
+      "other",
+      "morluto/rea",
+      "@morluto/rea",
+      null,
+      "dsh plugin --profile web add @morluto/rea@0.2.1",
+      25,
+      5,
+      1,
+      0,
+      null,
+      "TypeScript",
+      "https://www.dsh.so/artifact/rea/",
+      null
+    ],
+    [
+      "r~deepseek-ai~deepseek-harness",
+      "deepseek-harness",
+      "DeepSeek Harness: Everything is a Plugin.",
+      261635,
+      "other",
+      "deepseek-ai/deepseek-harness",
+      null,
+      null,
+      "dsh plugin --profile web add github:deepseek-ai/deepseek-harness",
+      25,
+      5,
+      1,
+      0,
+      null,
+      "TypeScript",
+      "https://www.dsh.so/artifact/deepseek-harness/",
+      null
+    ],
+    [
+      "r~nexu-io~open-design",
+      "open-design",
+      "The 1st Collaborative AI Design Agent Workspace. Local-first and open source. Create motion, prototypes, websites, apps, dashboards, presentations, images, and videos with your team and AI agents. Sh…",
+      103993,
+      "other",
+      "nexu-io/open-design",
+      null,
+      null,
+      "dsh plugin --profile web add github:nexu-io/open-design#open-design-v0.26.1",
+      25,
+      5,
+      1,
+      0,
+      null,
+      "TypeScript",
+      "https://www.dsh.so/artifact/open-design/",
+      null
+    ],
+    [
+      "r~tt-a1i~archify",
+      "archify",
+      "从仓库或系统描述生成经过校验的自包含交互式架构图、流程图、时序图、数据流图和生命周期图。",
+      89311,
+      "docs",
+      "tt-a1i/archify",
+      "@tt-a1i/archify-dsh",
+      "1.0.0",
+      "dsh plugin --profile web add github:tt-a1i/archify#v3.2.0",
+      31,
+      5,
+      1,
+      0,
+      30169,
+      "JavaScript",
+      "https://www.dsh.so/artifact/archify/",
+      "https://awesome-dsh-plugin.com/p/tt-a1i/archify--integrations-deepseek-harness/"
+    ],
+    [
+      "r~ruvnet~ruflo",
+      "ruflo",
+      "🌊 The original agent harness. Deploy intelligent multi-player swarms, coordinate autonomous workflows, and build conversational AI systems. Features adaptive memory, self-learning intelligence, feder…",
+      79321,
+      "developer",
+      "ruvnet/ruflo",
+      null,
+      null,
+      "dsh plugin --profile web add github:ruvnet/ruflo",
+      25,
+      5,
+      1,
+      0,
+      null,
+      "TypeScript",
+      "https://www.dsh.so/artifact/ruflo/",
+      null
+    ],
+    [
+      "r~mem0ai~mem0",
+      "mem0",
+      "The Memory Layer for AI Agents - Drop-in memory infrastructure for AI agents and apps. Context that persists. Built for production.",
+      67773,
+      "knowledge",
+      "mem0ai/mem0",
+      null,
+      null,
+      "dsh plugin --profile web add github:mem0ai/mem0",
+      16,
+      2,
+      1,
+      4,
+      null,
+      null,
+      "https://www.dsh.so/artifact/mem0/",
+      null
+    ],
+    [
+      "r~mempalace~mempalace",
+      "@MemPalace/mempalace",
+      "The best-benchmarked open-source AI memory system. And it's free.",
+      59725,
+      "knowledge",
+      "mempalace/mempalace",
+      null,
+      null,
+      "dsh plugin --profile web add github:MemPalace/mempalace",
+      16,
+      2,
+      5,
+      0,
+      null,
+      null,
+      "https://www.dsh.so/artifact/mempalace/",
+      null
+    ],
+    [
+      "r~vectorize-io~hindsight",
+      "coding-agents",
+      "Hindsight：会学习的 Agent 长期记忆系统，自动召回/保存、知识页、深度反思与按仓库隔离的记忆银行。",
+      53779,
+      "memory",
+      "vectorize-io/hindsight",
+      "@vectorize-io/hindsight-coding-agents",
+      "0.8.2",
+      "dsh plugin --profile web add @vectorize-io/hindsight-coding-agents",
+      6,
+      0,
+      0,
+      0,
+      51647,
+      null,
+      null,
+      "https://awesome-dsh-plugin.com/p/vectorize-io/hindsight--hindsight-integrations-coding-agents/"
+    ]
+  ],
+  "categories": [
+    [
+      "other",
+      7192
+    ],
+    [
+      "developer",
+      1953
+    ],
+    [
+      "desktop",
+      1897
+    ],
+    [
+      "ui",
+      1735
+    ],
+    [
+      "knowledge",
+      1530
+    ],
+    [
+      "browser",
+      1205
+    ],
+    [
+      "vision",
+      1025
+    ],
+    [
+      "tools",
+      883
+    ],
+    [
+      "storage",
+      700
+    ],
+    [
+      "network",
+      691
+    ],
+    [
+      "terminal",
+      553
+    ],
+    [
+      "automation",
+      547
+    ],
+    [
+      "security",
+      503
+    ],
+    [
+      "session",
+      485
+    ],
+    [
+      "ai",
+      479
+    ],
+    [
+      "dev",
+      427
+    ],
+    [
+      "workflow",
+      380
+    ],
+    [
+      "model",
+      361
+    ],
+    [
+      "usage",
+      359
+    ],
+    [
+      "media",
+      332
+    ],
+    [
+      "memory",
+      283
+    ],
+    [
+      "data",
+      280
+    ],
+    [
+      "theme",
+      272
+    ],
+    [
+      "skill",
+      250
+    ],
+    [
+      "notify",
+      247
+    ],
+    [
+      "fun",
+      202
+    ],
+    [
+      "finance",
+      200
+    ],
+    [
+      "remote",
+      198
+    ],
+    [
+      "content",
+      192
+    ],
+    [
+      "productivity",
+      145
+    ],
+    [
+      "git",
+      144
+    ],
+    [
+      "docs",
+      104
+    ],
+    [
+      "market",
+      101
+    ],
+    [
+      "voice",
+      85
+    ],
+    [
+      "wsl",
+      81
+    ],
+    [
+      "game",
+      77
+    ],
+    [
+      "identity",
+      59
+    ],
+    [
+      "agi",
+      41
+    ],
+    [
+      "launcher",
+      39
+    ]
+  ],
+  "levels": [
+    757,
+    192,
+    746,
+    412,
+    4556,
+    19574
+  ],
+  "risks": [
+    757,
+    22590,
+    1191,
+    341,
+    19,
+    1339
+  ],
+  "health": {
+    "ok": 23646,
+    "deleted": 1654,
+    "renamed": 651,
+    "merged": 224,
+    "topicRemoved": 62
+  },
+  "input": {
+    "topic": 1000,
+    "market": 3552,
+    "awesome": 6896,
+    "workshop": 1000,
+    "dshso": 25527
+  },
+  "withBit": {
+    "topic": 1000,
+    "market": 3407,
+    "awesome": 6751,
+    "workshop": 1000,
+    "dshso": 25480
+  },
+  "only": {
+    "dshso": 19009,
+    "market": 0,
+    "awesome": 651,
+    "snapshot": 94
+  },
+  "upstream": {
+    "dshso": {
+      "generatedAt": "2026-10-26T00:14:18.434Z",
+      "license": "CC-BY-4.0",
+      "attribution": "dsh.so — DSH Developer Hub (https://www.dsh.so)",
+      "docs": "https://www.dsh.so/data/plugins-index/",
+      "source": "https://www.dsh.so/artifacts/"
+    },
+    "awesome": {
+      "updated": "2026-10-25",
+      "license": "CC0-1.0",
+      "url": "https://awesome-dsh-plugin.com",
+      "source": "https://github.com/awesome-dsh-plugin/awesome-dsh-plugin"
+    },
+    "market": {
+      "format": 1,
+      "url": "https://dshmarket.com/"
+    },
+    "workshop": {
+      "fetchedAt": "2026-10-26T04:50:39Z",
+      "total": 1000,
+      "source": "https://github.com/topics/dsh-plugin",
+      "url": "https://dsh-plugin.github.io/"
+    },
+    "topic": {
+      "retrieved": 1000,
+      "cap": 1000,
+      "url": "https://github.com/topics/dsh-plugin"
+    }
+  }
+}
