@@ -214,17 +214,30 @@ function pluginHref(id) {
   return `#/plugin?${params}`;
 }
 
+function addTarget(install) {
+  const text = String(install || "");
+  const mark = " add ";
+  const at = text.lastIndexOf(mark);
+  return at === -1 ? text : text.slice(at + mark.length);
+}
+
 function card(plugin) {
   const repo = plugin.repo || plugin.npm || "";
   const cat = plugin.cat && plugin.cat !== "other" ? `<span class="pill">${hi(catLabel(plugin.cat))}</span>` : "";
   const health = plugin.health ? `<span class="pill pill-risk">${esc(HEALTH[plugin.health] || "异常")}</span>` : "";
   const sources = plugin.local ? `<span class="pill">本机</span>` : sourcePills(plugin.src);
-  return `<a class="card${plugin.health === 1 ? " is-dead" : ""}" href="${esc(pluginHref(plugin.id))}">
-    <header><h3>${hi(plugin.name)}</h3>${plugin.stars ? `<em class="stars">${esc(compact(plugin.stars))}</em>` : ""}</header>
-    ${repo ? `<p class="repo">${hi(repo)}</p>` : ""}
-    <p class="desc">${hi(plugin.desc || "暂无简介")}</p>
-    <footer>${cat}${levelChip(plugin)}${riskChip(plugin)}${health}${sources}</footer>
-  </a>`;
+  const command = plugin.install
+    ? `<div class="card-add"><code title="${esc(plugin.install)}">${esc(addTarget(plugin.install))}</code><button class="btn" type="button" data-act="copy" data-copy="${esc(plugin.install)}" title="复制完整命令，到终端执行">添加到 DSH</button></div>`
+    : "";
+  return `<article class="card${plugin.health === 1 ? " is-dead" : ""}">
+    <a class="card-main" href="${esc(pluginHref(plugin.id))}">
+      <header><h3>${hi(plugin.name)}</h3>${plugin.stars ? `<em class="stars">${esc(compact(plugin.stars))}</em>` : ""}</header>
+      ${repo ? `<p class="repo">${hi(repo)}</p>` : ""}
+      <p class="desc">${hi(plugin.desc || "暂无简介")}</p>
+      <footer>${cat}${levelChip(plugin)}${riskChip(plugin)}${health}${sources}<span class="view">查看</span></footer>
+    </a>
+    ${command}
+  </article>`;
 }
 
 function pager(page, pages) {
@@ -405,6 +418,10 @@ async function renderMarket(my) {
     <div class="page-head market-head">
       <h1>插件目录</h1>
       <p class="muted" id="catalog-note">${catalogNote(manifest)}</p>
+    </div>
+    <div class="add-banner">
+      <div><b>在终端添加到 DSH</b><span>搜索或选分类，点查看看说明，再复制命令到终端。网页不会安装。</span></div>
+      <code>dsh plugin --profile web add …</code>
     </div>
     <div class="market">
     <aside class="market-side">
