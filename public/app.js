@@ -145,12 +145,8 @@ function navKey(path) {
 }
 
 function syncSearch() {
-  for (const id of ["top-q", "seek-q"]) {
-    const input = document.getElementById(id);
-    if (input && input.value !== state.q) input.value = state.q;
-  }
-  const clear = document.getElementById("top-clear");
-  if (clear) clear.hidden = !state.q;
+  const input = document.getElementById("seek-q");
+  if (input && input.value !== state.q) input.value = state.q;
 }
 
 function renderSession() {
@@ -1185,29 +1181,6 @@ function applyQuery(value, immediate = false) {
   else queryTimer = setTimeout(run, 160);
 }
 
-document.getElementById("top-search").addEventListener("submit", (event) => {
-  event.preventDefault();
-  clearTimeout(queryTimer);
-  state.q = document.getElementById("top-q").value.trim();
-  state.page = 1;
-  syncSearch();
-  const next = marketHash();
-  if (location.hash !== next) location.hash = next;
-  else if (isCatalog(readRoute().path)) paintResults();
-  else draw();
-});
-
-const topQuery = document.getElementById("top-q");
-topQuery.addEventListener("compositionstart", () => { composing = true; });
-topQuery.addEventListener("compositionend", (event) => {
-  composing = false;
-  if (isCatalog(readRoute().path)) applyQuery(event.target.value);
-});
-topQuery.addEventListener("input", (event) => {
-  if (composing || !isCatalog(readRoute().path)) return;
-  applyQuery(event.target.value);
-});
-
 document.body.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-act]");
   if (!button || button.disabled) return;
@@ -1230,8 +1203,6 @@ document.body.addEventListener("click", async (event) => {
   }
   if (act === "clear-q") {
     event.preventDefault();
-    const input = document.getElementById("top-q");
-    if (input) input.value = "";
     if (isCatalog(readRoute().path)) applyQuery("", true);
     else {
       state.q = "";
@@ -1418,7 +1389,7 @@ window.addEventListener("keydown", (event) => {
   }
   if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return;
   if (/input|textarea|select/i.test(event.target.tagName)) return;
-  const input = document.getElementById("top-q");
+  const input = document.getElementById("seek-q");
   if (!input) return;
   event.preventDefault();
   input.focus();

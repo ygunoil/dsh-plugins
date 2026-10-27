@@ -45,27 +45,7 @@ button, input, select { font: inherit; color: inherit; }
 .brand strong { display: block; font-size: 15px; }
 .brand small, .muted, .foot, .card .desc, .lede, .repo { color: var(--muted); }
 .mark { width: 32px; height: 32px; color: var(--blue); }
-.top-search { position: relative; flex: 1; min-width: 180px; }
-.top-search input {
-  width: 100%;
-  border: 1px solid rgba(77, 107, 254, 0.55);
-  background: #0c1426;
-  border-radius: 999px;
-  padding: 9px 58px 9px 14px;
-  box-shadow: 0 0 0 1px rgba(77, 107, 254, 0.18), 0 0 28px rgba(77, 107, 254, 0.16);
-}
-.search-clear {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  border: 0;
-  background: transparent;
-  color: var(--blue-2);
-  cursor: pointer;
-  padding: 4px 6px;
-}
-.nav { display: flex; gap: 4px; }
+.nav { display: flex; gap: 4px; margin-left: auto; }
 .nav a, .btn, .btn-ghost { border-radius: 999px; padding: 8px 14px; }
 .nav a.is-on, .nav a:hover { background: rgba(77, 107, 254, 0.16); color: white; }
 .btn, .btn-ghost, .pager button { border: 0; cursor: pointer; }
@@ -337,10 +317,6 @@ h2 { margin: 0 0 12px; font-size: 18px; }
   flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 14px;
-}
-.top-search input:focus {
-  border-color: rgba(77, 107, 254, 0.95);
-  box-shadow: 0 0 0 4px rgba(77, 107, 254, 0.22);
 }
 .cat-board {
   position: relative;
@@ -755,7 +731,6 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fo
 @media (max-width: 720px) {
   .top { flex-wrap: wrap; padding: 12px; }
   .fresh { align-items: flex-start; }
-  .top-search { order: 4; flex: 1 1 100%; }
   .nav { order: 3; }
   .wrap { width: min(1280px, calc(100% - 20px)); }
   h1 { font-size: 24px; }
