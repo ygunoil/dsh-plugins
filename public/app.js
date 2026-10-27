@@ -463,12 +463,32 @@ async function loadLocalRows() {
   }
 }
 
+
+function mountStage(stage) {
+  if (!stage) return;
+  const move = (event) => {
+    const rect = stage.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const px = (event.clientX - rect.left) / rect.width * 2 - 1;
+    const py = (event.clientY - rect.top) / rect.height * 2 - 1;
+    stage.style.setProperty("--px", px.toFixed(3));
+    stage.style.setProperty("--py", py.toFixed(3));
+  };
+  stage.addEventListener("pointermove", move);
+}
+
 async function renderMarket(my) {
   const manifest = await boot();
   await loadLocalRows();
   if (my !== token) return;
   app.innerHTML = `<section class="page">
-    <section class="stage">
+    <section class="stage" id="stage">
+      <div class="stage-scene" aria-hidden="true">
+        <div class="stage-glow"></div>
+        <i class="orb orb-a"></i>
+        <i class="orb orb-b"></i>
+        <div class="stage-floor"></div>
+      </div>
       <p class="stage-news" id="catalog-note">${catalogNote(manifest)}</p>
       <h1>找到合适的插件</h1>
       <form class="composer" id="seek-form">
@@ -507,6 +527,7 @@ async function renderMarket(my) {
     </div>
     </div>
   </section>`;
+  mountStage(document.getElementById("stage"));
   const catInput = document.getElementById("cat-q");
   catInput.value = catQuery;
   catInput.addEventListener("input", (event) => {
