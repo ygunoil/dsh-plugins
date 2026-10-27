@@ -88,7 +88,7 @@ export function hydrate(row) {
   FIELDS.forEach((key, index) => {
     plugin[key] = row[index];
   });
-  plugin.q = [plugin.name, plugin.desc, plugin.repo, plugin.npm, plugin.id].filter(Boolean).join("\n").toLowerCase();
+  plugin.q = [plugin.name, plugin.desc, plugin.repo, plugin.npm, plugin.id, catLabel(plugin.cat)].filter(Boolean).join("\n").toLowerCase();
   return plugin;
 }
 
@@ -137,17 +137,94 @@ export function getById(id) {
   return byId.get(id) || items.find((plugin) => plugin.id === id) || null;
 }
 
+function tieBreak(sort) {
+  if (sort === "name") return (a, b) => a.name.localeCompare(b.name, "zh");
+  if (sort === "level") return (a, b) => b.level - a.level || b.stars - a.stars;
+  if (sort === "downloads") return (a, b) => (b.downloads || 0) - (a.downloads || 0) || b.stars - a.stars;
+  return (a, b) => b.stars - a.stars || a.name.localeCompare(b.name, "zh");
+}
+
+function scoreToken(plugin, token) {
+  const name = plugin.name.toLowerCase();
+  const repo = (plugin.repo || "").toLowerCase();
+  const npm = (plugin.npm || "").toLowerCase();
+  const cat = catLabel(plugin.cat).toLowerCase();
+  let score = 0;
+  if (name === token) score += 1000;
+  else if (name.startsWith(token)) score += 700;
+  else if (name.includes(token)) score += 400;
+  if (repo === token || repo.endsWith(`/${token}`)) score += 650;
+  else if (repo.includes(token)) score += 250;
+  if (npm === token || npm.endsWith(`/${token}`)) score += 650;
+  else if (npm.includes(token)) score += 220;
+  if (cat === token) score += 120;
+  else if (cat.includes(token)) score += 60;
+  if ((plugin.desc || "").toLowerCase().includes(token)) score += 40;
+  return score;
+}
+
+function matchScore(plugin, needle) {
+  const tokens = needle.split(/\s+/).filter(Boolean);
+  if (tokens.length <= 1) return scoreToken(plugin, needle);
+  return tokens.reduce((sum, token) => sum + scoreToken(plugin, token), 0);
+}
+
+export function catalogListKey(params) {
+  const get = (key) => params.get(key) || "";
+  const src = get("src");
+  const level = get("lv");
+  const sort = get("sort");
+  const page = get("page");
+  return [
+    get("q"),
+    get("cat"),
+    src === "0" ? "" : src,
+    level === "0" ? "" : level,
+    !sort || sort === "stars" ? "" : sort,
+    !page || page === "1" ? "" : page,
+  ].join("|");
+}
+
 export function filterPlugins(list, { q = "", cat = "", src = 0, level = 0, sort = "stars" } = {}) {
   const needle = q.trim().toLowerCase();
+  const tokens = needle.split(/\s+/).filter(Boolean);
   let out = list;
-  if (needle) out = out.filter((plugin) => plugin.q.includes(needle));
+  if (tokens.length) out = out.filter((plugin) => tokens.every((token) => plugin.q.includes(token)));
   if (cat) out = out.filter((plugin) => plugin.cat === cat);
   if (src) out = out.filter((plugin) => plugin.src & src);
   if (level) out = out.filter((plugin) => plugin.level === Number(level));
-  if (sort === "name") out = out.slice().sort((a, b) => a.name.localeCompare(b.name, "zh"));
-  else if (sort === "level") out = out.slice().sort((a, b) => b.level - a.level || b.stars - a.stars);
-  else if (sort === "downloads") out = out.slice().sort((a, b) => (b.downloads || 0) - (a.downloads || 0) || b.stars - a.stars);
+  if (tokens.length) {
+    const tie = tieBreak(sort);
+    out = out.slice().sort((a, b) => matchScore(b, needle) - matchScore(a, needle) || tie(a, b));
+  } else if (sort !== "stars") {
+    out = out.slice().sort(tieBreak(sort));
+  }
   return out;
+}
+
+export function replaceItems(plugins, builtAt = new Date().toISOString()) {
+  items = plugins.map((plugin) => {
+    const next = { ...plugin, local: false };
+    next.q = [next.name, next.desc, next.repo, next.npm, next.id, catLabel(next.cat)].filter(Boolean).join("\n").toLowerCase();
+    return next;
+  });
+  byId.clear();
+  for (const plugin of items) byId.set(plugin.id, plugin);
+  loaded = true;
+  loading = null;
+  if (manifest) {
+    const counts = new Map();
+    for (const plugin of items) {
+      const cat = plugin.cat || "other";
+      counts.set(cat, (counts.get(cat) || 0) + 1);
+    }
+    manifest.categories = [...counts.entries()].sort((a, b) => b[1] - a[1] || String(a[0]).localeCompare(String(b[0])));
+    manifest.total = items.length;
+    manifest.builtAt = builtAt;
+    manifest.live = true;
+  }
+  for (const fn of listeners) fn(items.length, items.length);
+  return items;
 }
 
 export function catLabel(id) {

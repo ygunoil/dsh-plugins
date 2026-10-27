@@ -39,7 +39,7 @@ npm run pack:example
 
 ## 部署
 
-静态文件在 `public/`。推到 [`ygunoil/dsh-plugins`](https://github.com/ygunoil/dsh-plugins) 的 `main` 后，Actions 会把 `public/` 发布到 GitHub Pages。
+静态文件在 `public/`。推到 [`ygunoil/dsh-plugins`](https://github.com/ygunoil/dsh-plugins) 的 `main` 后，Actions 会重新拉取四个源，再把 `public/` 发布到 GitHub Pages。同一套构建每小时跑一次。页面上的「同步最新」不等这次构建，直接在浏览器里核对源站。
 
 公开地址：<https://ygunoil.github.io/dsh-plugins/>
 

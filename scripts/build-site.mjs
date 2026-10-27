@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { FIELDS, SOURCE, mergeRecords, toRow } from "../lib/merge.js";
@@ -28,18 +28,34 @@ const SOURCES = [
   },
 ];
 
+const sourceMeta = {};
+
+async function noteSource(name, response) {
+  sourceMeta[name] = {
+    etag: response.headers.get("etag"),
+    bytes: Number(response.headers.get("content-length") || 0) || null,
+    modified: response.headers.get("last-modified"),
+  };
+}
+
 async function loadRaw(name) {
   const file = path.join(rawDir, name);
   const source = SOURCES.find((item) => item.file === name);
+  const refresh = process.argv.includes("--refresh");
   try {
     const text = await readFile(file, "utf8");
-    if (text.length > 1000 && !process.argv.includes("--refresh")) return JSON.parse(text);
+    if (text.length > 1000 && !refresh) {
+      const head = await fetch(source.url, { method: "HEAD", headers: { "user-agent": "dsh-plugins-builder" } });
+      if (head.ok) await noteSource(name, head);
+      return JSON.parse(text);
+    }
   } catch {
     // fetch below
   }
   console.log("fetch", source.url);
   const response = await fetch(source.url, { headers: { "user-agent": "dsh-plugins-builder" } });
   if (!response.ok) throw new Error(`${source.url} ${response.status}`);
+  await noteSource(name, response);
   const text = await response.text();
   await mkdir(rawDir, { recursive: true });
   await writeFile(file, text);
@@ -125,6 +141,9 @@ const manifest = {
   only,
   upstream: {
     dshso: {
+      etag: sourceMeta["dshso.json"]?.etag || null,
+      bytes: sourceMeta["dshso.json"]?.bytes || null,
+      modified: sourceMeta["dshso.json"]?.modified || null,
       generatedAt: dsh.generatedAt || dsh.generated || null,
       license: "CC-BY-4.0",
       attribution: dsh.license?.attribution || "dsh.so — DSH Developer Hub (https://www.dsh.so)",
@@ -132,16 +151,25 @@ const manifest = {
       source: dsh.source || "https://www.dsh.so/zh/artifacts/",
     },
     awesome: {
+      etag: sourceMeta["awesome.json"]?.etag || null,
+      bytes: sourceMeta["awesome.json"]?.bytes || null,
+      modified: sourceMeta["awesome.json"]?.modified || null,
       updated: awesome.updated || null,
       license: "CC0-1.0",
       url: awesome.url || "https://awesome-dsh-plugin.com/",
       source: awesome.source || "https://github.com/awesome-dsh-plugin/awesome-dsh-plugin",
     },
     market: {
+      etag: sourceMeta["market.json"]?.etag || null,
+      bytes: sourceMeta["market.json"]?.bytes || null,
+      modified: sourceMeta["market.json"]?.modified || null,
       format: market.format || 1,
       url: "https://dshmarket.com/",
     },
     workshop: {
+      etag: sourceMeta["workshop.json"]?.etag || null,
+      bytes: sourceMeta["workshop.json"]?.bytes || null,
+      modified: sourceMeta["workshop.json"]?.modified || null,
       fetchedAt: workshop.fetched_at || null,
       total: workshop.total || workshop.plugins?.length || 0,
       source: workshop.source || "https://github.com/topics/dsh-plugin",
@@ -156,6 +184,10 @@ const manifest = {
 };
 
 await writeFile(path.join(dataDir, "manifest.json"), JSON.stringify(manifest, null, 2));
+const engineDir = path.join(root, "public", "engine");
+await mkdir(engineDir, { recursive: true });
+await cp(path.join(root, "lib", "merge.js"), path.join(engineDir, "merge.js"));
+await cp(path.join(root, "lib", "sources.js"), path.join(engineDir, "sources.js"));
 console.log(JSON.stringify({
   raw: records.length,
   unique: merged.length,

@@ -19,17 +19,24 @@ import {
   getManifest,
   isLoaded,
   onProgress,
+  replaceItems,
   SOURCES,
-} from "./catalog.js?v=20261027";
+  catalogListKey,
+} from "./catalog.js?v=20261028c";
 import { readPackageJson } from "./zip.js?v=20261027";
 
 const app = document.querySelector("#app");
-const state = { q: "", cat: "", src: 0, level: 0, sort: "stars", page: 1 };
+const state = { q: "", cat: "", src: 0, level: 0, sort: "stars", page: 1, open: "" };
 const pageSize = 24;
 let token = 0;
 let unsub = null;
 let flash = "";
 let localRows = [];
+let renderedListKey = "";
+let syncing = false;
+let queryTimer = 0;
+let composing = false;
+let remoteToken = 0;
 
 const HEALTH = { 1: "源仓库已删除", 2: "源仓库已改名", 3: "源仓库已合并", 4: "topic 已移除" };
 const RISK = { 1: "低", 2: "中", 3: "高", 4: "严重", 5: "待核验" };
@@ -116,6 +123,7 @@ function marketHash() {
   if (state.level) params.set("lv", String(state.level));
   if (state.sort && state.sort !== "stars") params.set("sort", state.sort);
   if (state.page > 1) params.set("page", String(state.page));
+  if (state.open) params.set("id", state.open);
   const query = params.toString();
   return query ? `#/market?${query}` : "#/market";
 }
@@ -127,6 +135,7 @@ function applyMarketParams(params) {
   state.level = Number(params.get("lv") || 0);
   state.sort = params.get("sort") || "stars";
   state.page = Math.max(1, Number(params.get("page") || 1) || 1);
+  state.open = params.get("id") || "";
 }
 
 function navKey(path) {
@@ -139,6 +148,8 @@ function navKey(path) {
 function syncSearch() {
   const input = document.getElementById("top-q");
   if (input && input.value !== state.q) input.value = state.q;
+  const clear = document.getElementById("top-clear");
+  if (clear) clear.hidden = !state.q;
 }
 
 function renderSession() {
@@ -178,15 +189,44 @@ function riskChip(plugin) {
   return `<span class="pill pill-risk">${plugin.risk === 4 ? "严重" : "高风险"}</span>`;
 }
 
+function queryTokens() {
+  return state.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
+}
+
+function hi(value) {
+  const text = String(value ?? "");
+  const tokens = queryTokens();
+  if (!tokens.length || !text) return esc(text);
+  const pattern = new RegExp(tokens.map((token) => token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "gi");
+  let html = "";
+  let last = 0;
+  for (const match of text.matchAll(pattern)) {
+    html += esc(text.slice(last, match.index));
+    html += `<mark>${esc(match[0])}</mark>`;
+    last = match.index + match[0].length;
+  }
+  html += esc(text.slice(last));
+  return html;
+}
+
+function openHref(id) {
+  const previous = state.open;
+  state.open = id;
+  const href = marketHash();
+  state.open = previous;
+  return href;
+}
+
 function card(plugin) {
   const repo = plugin.repo || plugin.npm || "";
-  const cat = plugin.cat && plugin.cat !== "other" ? `<span class="pill">${esc(catLabel(plugin.cat))}</span>` : "";
+  const cat = plugin.cat && plugin.cat !== "other" ? `<span class="pill">${hi(catLabel(plugin.cat))}</span>` : "";
   const health = plugin.health ? `<span class="pill pill-risk">${esc(HEALTH[plugin.health] || "异常")}</span>` : "";
   const sources = plugin.local ? `<span class="pill">本机</span>` : sourcePills(plugin.src);
-  return `<a class="card${plugin.health === 1 ? " is-dead" : ""}" href="#/plugin?id=${encodeURIComponent(plugin.id)}">
-    <header><h3>${esc(plugin.name)}</h3>${plugin.stars ? `<em class="stars">${esc(compact(plugin.stars))}</em>` : ""}</header>
-    ${repo ? `<p class="repo">${esc(repo)}</p>` : ""}
-    <p class="desc">${esc(plugin.desc || "暂无简介")}</p>
+  const open = state.open === plugin.id ? " is-open" : "";
+  return `<a class="card${plugin.health === 1 ? " is-dead" : ""}${open}" href="${esc(openHref(plugin.id))}">
+    <header><h3>${hi(plugin.name)}</h3>${plugin.stars ? `<em class="stars">${esc(compact(plugin.stars))}</em>` : ""}</header>
+    ${repo ? `<p class="repo">${hi(repo)}</p>` : ""}
+    <p class="desc">${hi(plugin.desc || "暂无简介")}</p>
     <footer>${cat}${levelChip(plugin)}${riskChip(plugin)}${health}${sources}</footer>
   </a>`;
 }
@@ -223,6 +263,17 @@ function currentPage(filtered) {
   return { page: shown, pages, slice: filtered.slice(start, start + pageSize) };
 }
 
+function categoryOptions() {
+  const manifest = getManifest();
+  const cats = (manifest?.categories || []).map(([id, count]) => option(id, `${catLabel(id)} · ${num(count)}`, state.cat)).join("");
+  return `${option("", "全部", state.cat)}${cats}`;
+}
+
+function fillCategories() {
+  const select = document.getElementById("cat");
+  if (select) select.innerHTML = categoryOptions();
+}
+
 function paintResults() {
   const root = document.getElementById("results");
   if (!root) return;
@@ -231,11 +282,16 @@ function paintResults() {
   const filtered = filterPlugins(base, state);
   const { page, pages, slice } = currentPage(filtered);
   const loading = !isLoaded() && state.src !== 32;
-  const progress = loading ? `已载入 ${num(getItems().length)} / ${num(manifest?.total)}` : `${num(filtered.length)} 条`;
-  const empty = loading ? "正在载入目录…" : "没有匹配的插件。";
-  root.innerHTML = `<div class="result-bar"><span>${progress}</span><span>第 ${num(page)} / ${num(pages)} 页</span></div>
+  const filtering = Boolean(state.q.trim() || state.cat || state.src || state.level || (state.sort && state.sort !== "stars"));
+  const progress = loading
+    ? `已载入 ${num(getItems().length)} / ${num(manifest?.total)}`
+    : `${num(filtered.length)} 条${state.q.trim() ? " · 相关的排在前面" : ""}`;
+  const empty = loading ? "正在载入目录…" : `没有匹配的插件。${filtering ? "可以清除条件后再找。" : ""}`;
+  const clear = filtering ? `<button type="button" class="text-btn" data-act="reset">清除条件</button>` : "";
+  root.innerHTML = `<div class="result-bar"><span>${progress}</span><span>${clear}第 ${num(page)} / ${num(pages)} 页</span></div>
     <div class="grid">${slice.map(card).join("") || `<p class="empty">${empty}</p>`}</div>
     ${pager(page, pages)}`;
+  renderedListKey = stateListKey();
 }
 
 async function loadLocalRows() {
@@ -253,14 +309,13 @@ async function renderMarket(my) {
   const manifest = await boot();
   await loadLocalRows();
   if (my !== token) return;
-  const cats = (manifest.categories || []).map(([id, count]) => option(id, `${catLabel(id)} · ${num(count)}`, state.cat)).join("");
   app.innerHTML = `<section class="page">
     <div class="page-head">
       <h1>插件目录</h1>
-      <p class="muted">${num(manifest.total)} 条，五个公开来源去重。Star 是 GitHub 星标，不是安装量。</p>
+      <p class="muted" id="catalog-note">${catalogNote(manifest)}</p>
     </div>
     <form class="toolbar" data-form="market-filters">
-      <label class="field"><span>分类</span><select id="cat" aria-label="分类">${option("", "全部", state.cat)}${cats}</select></label>
+      <label class="field"><span>分类</span><select id="cat" aria-label="分类">${categoryOptions()}</select></label>
       <label class="field"><span>来源</span><select id="src" aria-label="来源">
         ${option(0, "全部", state.src)}
         ${SOURCES.map((source) => option(source.bit, source.name, state.src)).join("")}
@@ -292,6 +347,7 @@ async function renderMarket(my) {
     });
   }
   paintResults();
+  renderDrawer();
   if (unsub) unsub();
   unsub = onProgress(() => paintResults());
   ensureAll().then(() => {
@@ -415,7 +471,7 @@ async function renderAbout(my) {
   app.innerHTML = `<section class="page">
     <div class="page-head">
       <h1>关于这个目录</h1>
-      <p class="lede">把 GitHub topic、dshmarket、awesome-dsh-plugin、创意工坊和 dsh.so 收成一份目录。同一个仓库只留一条。构建于 ${esc(day(manifest.builtAt))}。</p>
+      <p class="lede">把 GitHub topic、dshmarket、awesome-dsh-plugin、创意工坊和 dsh.so 收成一份目录。同一个仓库只留一条。页面会核对源站指纹，有变化可以马上同步；站点每小时也会重新构建。当前快照 ${esc(day(manifest.builtAt))}。</p>
     </div>
     <article class="panel">
       <h2>来源</h2>
@@ -527,13 +583,89 @@ function renderNotFound() {
   app.innerHTML = `<section class="page panel"><h1>没有这一页</h1><p><a href="#/market">返回目录</a></p></section>`;
 }
 
+function listHash() {
+  const open = state.open;
+  state.open = "";
+  const href = marketHash();
+  state.open = open;
+  return href;
+}
+
+function stateListKey() {
+  const hash = listHash();
+  const cut = hash.indexOf("?");
+  return catalogListKey(new URLSearchParams(cut === -1 ? "" : hash.slice(cut + 1)));
+}
+
+function cardId(href) {
+  const cut = String(href || "").indexOf("?");
+  if (cut < 0) return "";
+  return new URLSearchParams(href.slice(cut + 1)).get("id") || "";
+}
+
+function scrollList() {
+  const behavior = matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+  window.scrollTo({ top: 0, behavior });
+}
+
+function paintCatalogShell(params) {
+  applyMarketParams(params);
+  syncSearch();
+  markNav("/market");
+  renderSession();
+  for (const [id, value] of [
+    ["cat", state.cat],
+    ["src", String(state.src)],
+    ["lv", String(state.level)],
+    ["sort", state.sort || "stars"],
+  ]) {
+    const el = document.getElementById(id);
+    if (el && el.value !== value) el.value = value;
+  }
+  paintResults();
+  const plugin = state.open ? (getById(state.open) || localRows.find((item) => item.id === state.open)) : null;
+  document.title = plugin ? `${plugin.name} · DSH Plugins` : "目录 · DSH Plugins";
+  renderDrawer();
+}
+
 async function draw() {
+  const route = readRoute();
+  let path = route.path;
+  let params = route.params;
+  if (path.startsWith("/plugin")) {
+    const id = params.get("id") || "";
+    const next = new URLSearchParams(params);
+    next.delete("id");
+    if (id) next.set("id", id);
+    path = "/market";
+    params = next;
+    const query = next.toString();
+    const hash = query ? `#/market?${query}` : "#/market";
+    if (location.hash !== hash) history.replaceState(null, "", hash);
+  }
+  if (isCatalog(path) && document.getElementById("results")) {
+    if (catalogListKey(params) === renderedListKey) {
+      state.open = params.get("id") || "";
+      syncSearch();
+      markNav(path);
+      renderSession();
+      document.querySelectorAll(".card").forEach((card) => {
+        card.classList.toggle("is-open", cardId(card.getAttribute("href")) === state.open);
+      });
+      const plugin = state.open ? (getById(state.open) || localRows.find((item) => item.id === state.open)) : null;
+      document.title = plugin ? `${plugin.name} · DSH Plugins` : "目录 · DSH Plugins";
+      renderDrawer();
+      return;
+    }
+    paintCatalogShell(params);
+    scrollList();
+    return;
+  }
   const my = ++token;
   if (unsub) {
     unsub();
     unsub = null;
   }
-  const { path, params } = readRoute();
   if (isCatalog(path)) applyMarketParams(params);
   syncSearch();
   markNav(path);
@@ -553,7 +685,260 @@ async function draw() {
   }
 }
 
+
+function catalogNote(manifest) {
+  const when = day(manifest?.builtAt);
+  if (manifest?.live) return `${num(manifest.total)} 条 · 刚刚从源站同步。Star 是 GitHub 星标，不是安装量。`;
+  return `${num(manifest?.total)} 条 · 构建于 ${when || "未知"}。上方可以同步到最新。Star 是 GitHub 星标，不是安装量。`;
+}
+
+function drawerHtml(plugin) {
+  const repoUrl = githubUrl(plugin.repo);
+  const cat = plugin.cat && plugin.cat !== "other" ? catLabel(plugin.cat) : "未分类";
+  return `<div class="drawer-bar">
+      <a href="${esc(listHash())}" data-act="close">返回列表</a>
+      <button type="button" class="btn btn-ghost" data-act="close">关闭</button>
+    </div>
+    <p class="crumb">${esc(cat)}</p>
+    <h1>${esc(plugin.name)}</h1>
+    <p class="lede">${esc(plugin.desc || "暂无简介")}</p>
+    <div class="split">${levelChip(plugin)}${riskChip(plugin)}${plugin.health ? `<span class="pill pill-risk">${esc(HEALTH[plugin.health])}</span>` : ""}${plugin.local ? `<span class="pill">本机</span>` : sourcePills(plugin.src)}</div>
+    ${plugin.install ? `<div class="install"><code>${esc(plugin.install)}</code><button class="btn" type="button" data-act="copy" data-copy="${esc(plugin.install)}">复制</button></div>` : ""}
+    <div class="actions">
+      ${repoUrl && plugin.health !== 1 ? `<a class="btn" href="${esc(`${repoUrl}/archive/HEAD.zip`)}">下载源码</a>` : ""}
+      ${repoUrl ? `<a class="btn btn-ghost" href="${esc(repoUrl)}" target="_blank" rel="noopener noreferrer">GitHub</a>` : ""}
+      ${plugin.dsh ? `<a class="btn btn-ghost" href="${esc(safeUrl(plugin.dsh))}" target="_blank" rel="noopener noreferrer">dsh.so</a>` : ""}
+      ${npmUrl(plugin.npm) ? `<a class="btn btn-ghost" href="${esc(npmUrl(plugin.npm))}" target="_blank" rel="noopener noreferrer">npm</a>` : ""}
+    </div>
+    <div id="repo-live" class="repo-live"><p class="muted">${repoUrl ? "正在读取仓库说明…" : "这条没有 GitHub 仓库。"}</p></div>
+    <div class="facts">
+      <div><span>仓库</span><b>${esc(plugin.repo || "—")}</b></div>
+      <div><span>包名</span><b>${esc(plugin.npm || "—")}</b></div>
+      <div><span>版本</span><b>${esc(plugin.ver || "—")}</b></div>
+      <div><span>Star</span><b>${plugin.stars ? esc(compact(plugin.stars)) : "—"}</b></div>
+      <div><span>下载量</span><b>${plugin.downloads ? esc(compact(plugin.downloads)) : "—"}</b></div>
+      <div><span>语言</span><b>${esc(plugin.lang || "—")}</b></div>
+    </div>`;
+}
+
+function closeDrawer() {
+  state.open = "";
+  const next = marketHash();
+  if (location.hash !== next) location.hash = next;
+  else renderDrawer();
+}
+
+async function renderDrawer() {
+  const id = state.open;
+  document.body.classList.toggle("with-drawer", Boolean(id));
+  let drawer = document.getElementById("drawer");
+  if (!id) {
+    drawer?.remove();
+    return;
+  }
+  if (!drawer) {
+    drawer = document.createElement("aside");
+    drawer.id = "drawer";
+    drawer.className = "drawer";
+    drawer.setAttribute("aria-label", "插件详情");
+    document.body.appendChild(drawer);
+  }
+  if (drawer.dataset.id === id && drawer.dataset.ready === "1") return;
+  drawer.dataset.id = id;
+  drawer.dataset.ready = "0";
+  let plugin = getById(id) || localRows.find((item) => item.id === id);
+  if (!plugin) {
+    drawer.innerHTML = `<p class="muted">正在打开…</p>`;
+    try { await ensureAll(); } catch { /* paint error elsewhere */ }
+    if (state.open !== id) return;
+    plugin = getById(id);
+  }
+  if (!plugin) {
+    drawer.innerHTML = `<p>没有这个插件。</p><button class="btn" type="button" data-act="close">返回</button>`;
+    return;
+  }
+  drawer.innerHTML = drawerHtml(plugin);
+  drawer.dataset.ready = "1";
+  drawer.scrollTop = 0;
+  loadRemote(plugin);
+}
+
+function inlineReadme(text) {
+  const re = /(`[^`]+`)|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|\*\*([^*]+)\*\*/g;
+  let html = "";
+  let last = 0;
+  for (const match of text.matchAll(re)) {
+    html += esc(text.slice(last, match.index));
+    if (match[1]) html += `<code>${esc(match[1].slice(1, -1))}</code>`;
+    else if (match[3]) {
+      const url = safeUrl(match[3]);
+      html += url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(match[2])}</a>` : esc(match[0]);
+    } else if (match[4]) html += `<strong>${esc(match[4])}</strong>`;
+    last = match.index + match[0].length;
+  }
+  html += esc(text.slice(last));
+  return html;
+}
+
+function readableSource(raw) {
+  const text = String(raw || "").replace(/\r\n/g, "\n");
+  if (!/<\/?[a-z][\s\S]*?>/i.test(text)) return text;
+  return text
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<h([1-3])[^>]*>/gi, (_, level) => `\n${"#".repeat(Number(level))} `)
+    .replace(/<li[^>]*>/gi, "\n- ")
+    .replace(/<a\s+[^>]*href="(https?:\/\/[^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href, label) => `[${label.replace(/<[^>]+>/g, "")}](${href})`)
+    .replace(/<\/(p|div|h[1-6]|li|tr|pre|blockquote)>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'");
+}
+
+function renderReadme(raw) {
+  const text = readableSource(raw).slice(0, 8000);
+  const blocks = text.split("```");
+  return blocks.map((block, index) => {
+    if (index % 2 === 1) {
+      const nl = block.indexOf("\n");
+      const code = nl === -1 ? block : block.slice(nl + 1);
+      return `<pre class="readme-code">${esc(code.replace(/\n$/, ""))}</pre>`;
+    }
+    return block.split(/\n{2,}/).map((para) => {
+      const lines = para.split("\n").filter((line) => line.trim());
+      if (!lines.length) return "";
+      const heading = lines.length === 1 ? lines[0].match(/^(#{1,3})\s+(.+)$/) : null;
+      if (heading) return `<h${heading[1].length + 2}>${inlineReadme(heading[2])}</h${heading[1].length + 2}>`;
+      if (lines.every((line) => /^\s*[-*]\s+/.test(line))) {
+        return `<ul>${lines.map((line) => `<li>${inlineReadme(line.replace(/^\s*[-*]\s+/, ""))}</li>`).join("")}</ul>`;
+      }
+      return `<p>${lines.map((line) => inlineReadme(line)).join("<br>")}</p>`;
+    }).join("");
+  }).join("");
+}
+
+function paintRemote(slot, data) {
+  const when = data.pushed ? `仓库更新于 ${esc(day(data.pushed))}。` : "";
+  const stars = data.stars != null ? `当前 Star ${esc(compact(data.stars))}。` : "";
+  const body = data.readme
+    ? `<div class="readme">${renderReadme(data.readme)}</div>`
+    : `<p class="muted">仓库没有可读取的 README。</p>`;
+  slot.innerHTML = `<p class="muted">${when}${stars}说明来自 GitHub。</p>${body}`;
+}
+
+async function loadRemote(plugin) {
+  const slot = document.getElementById("repo-live");
+  const repoUrl = githubUrl(plugin.repo);
+  if (!slot || !repoUrl) return;
+  const mine = ++remoteToken;
+  const cacheKey = `dsh-repo:3:${plugin.repo}`;
+  try {
+    const cached = JSON.parse(sessionStorage.getItem(cacheKey) || "null");
+    if (cached && Date.now() - cached.at < 10 * 60 * 1000) {
+      if (mine === remoteToken && slot.isConnected) paintRemote(slot, cached);
+      return;
+    }
+  } catch {
+    // Ignore a broken cache.
+  }
+  const [owner, name] = plugin.repo.split("/");
+  try {
+    const [repoResponse, readmeResponse] = await Promise.all([
+      fetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`, {
+        headers: { accept: "application/vnd.github+json" },
+      }),
+      fetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}/readme`, {
+        headers: { accept: "application/vnd.github.raw" },
+      }),
+    ]);
+    if (mine !== remoteToken || state.open !== plugin.id || !slot.isConnected) return;
+    if (repoResponse.status === 403 || repoResponse.status === 429) {
+      slot.innerHTML = `<p class="muted">GitHub 暂时限制读取。可以打开仓库查看最新说明。</p>`;
+      return;
+    }
+    const repo = repoResponse.ok ? await repoResponse.json() : null;
+    const readme = readmeResponse.ok ? readableSource(await readmeResponse.text()).slice(0, 8000) : "";
+    const data = { pushed: repo?.pushed_at || "", stars: repo?.stargazers_count ?? null, readme, at: Date.now() };
+    try { sessionStorage.setItem(cacheKey, JSON.stringify(data)); } catch { /* quota */ }
+    if (mine === remoteToken && slot.isConnected) paintRemote(slot, data);
+  } catch {
+    if (mine === remoteToken && slot.isConnected) slot.innerHTML = `<p class="muted">仓库说明暂时没有读到。</p>`;
+  }
+}
+
+function setFresh(message, action) {
+  const bar = document.getElementById("fresh");
+  if (!bar) return;
+  bar.hidden = !message;
+  bar.innerHTML = message
+    ? `<span>${esc(message)}</span>${action || ""}`
+    : "";
+}
+
+function syncButton(label = "同步最新") {
+  return `<button type="button" class="btn" data-act="sync">${label}</button>`;
+}
+
+function cancelButton() {
+  return `<button type="button" class="btn btn-ghost" data-act="cancel-sync">取消</button>`;
+}
+
+async function syncNow() {
+  if (syncing) return;
+  syncing = true;
+  setFresh("正在从四个源站同步…", cancelButton());
+  try {
+    const { pullLive } = await import("./live.js?v=20261028c");
+    const { items, stamps } = await pullLive((message) => setFresh(message, cancelButton()));
+    const builtAt = new Date().toISOString();
+    replaceItems(items, builtAt);
+    const manifest = getManifest();
+    if (manifest?.upstream) {
+      for (const [key, stamp] of Object.entries(stamps)) {
+        manifest.upstream[key] = { ...(manifest.upstream[key] || {}), ...stamp };
+      }
+    }
+    fillCategories();
+    const note = document.getElementById("catalog-note");
+    if (note && manifest) note.textContent = catalogNote(manifest);
+    paintResults();
+    const drawer = document.getElementById("drawer");
+    if (drawer) drawer.dataset.ready = "0";
+    renderDrawer();
+    setFresh(`已同步 ${num(items.length)} 条，更新于 ${day(builtAt)}。`, syncButton("再次同步"));
+  } catch (error) {
+    if (error?.name === "AbortError") setFresh("同步已取消。", syncButton());
+    else setFresh(error.message || "同步没有完成。", syncButton("重试"));
+  } finally {
+    syncing = false;
+  }
+}
+
+async function watchSources() {
+  if (syncing) return;
+  const manifest = await boot();
+  const button = syncButton();
+  const age = Date.now() - Date.parse(manifest.builtAt || "");
+  const stale = !manifest.live && Number.isFinite(age) && age > 2 * 60 * 60 * 1000;
+  if (!manifest.live) {
+    setFresh(stale
+      ? `构建于 ${day(manifest.builtAt) || "未知"}，已经不是最新。`
+      : `构建于 ${day(manifest.builtAt) || "未知"}。源站有变化时可以马上同步。`, button);
+  }
+  const { probeSources } = await import("./live.js?v=20261028c");
+  const changed = await probeSources(manifest.upstream);
+  if (syncing) return;
+  if (changed.length) setFresh(`源站有更新：${changed.join("、")}。`, syncButton("立即同步"));
+  else if (manifest.live) setFresh(`已与源站一致，${num(manifest.total)} 条。`, button);
+}
+
 async function copyText(text) {
+
   try {
     await navigator.clipboard.writeText(text);
   } catch {
@@ -579,29 +964,84 @@ async function ingest(file) {
   await draw();
 }
 
+function applyQuery(value, immediate = false) {
+  state.q = value;
+  state.page = 1;
+  syncSearch();
+  const run = () => {
+    if (!isCatalog(readRoute().path)) return;
+    const next = marketHash();
+    if (location.hash !== next) history.replaceState(null, "", next);
+    paintResults();
+  };
+  clearTimeout(queryTimer);
+  if (immediate) run();
+  else queryTimer = setTimeout(run, 160);
+}
+
 document.getElementById("top-search").addEventListener("submit", (event) => {
   event.preventDefault();
+  clearTimeout(queryTimer);
   state.q = document.getElementById("top-q").value.trim();
   state.page = 1;
+  syncSearch();
   const next = marketHash();
   if (location.hash !== next) location.hash = next;
   else if (isCatalog(readRoute().path)) paintResults();
   else draw();
 });
 
-document.getElementById("top-q").addEventListener("input", (event) => {
-  if (!isCatalog(readRoute().path)) return;
-  state.q = event.target.value;
-  state.page = 1;
-  const next = marketHash();
-  if (location.hash !== next) history.replaceState(null, "", next);
-  paintResults();
+const topQuery = document.getElementById("top-q");
+topQuery.addEventListener("compositionstart", () => { composing = true; });
+topQuery.addEventListener("compositionend", (event) => {
+  composing = false;
+  if (isCatalog(readRoute().path)) applyQuery(event.target.value);
+});
+topQuery.addEventListener("input", (event) => {
+  if (composing || !isCatalog(readRoute().path)) return;
+  applyQuery(event.target.value);
 });
 
 document.body.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-act]");
   if (!button || button.disabled) return;
   const act = button.dataset.act;
+  if (act === "close") {
+    event.preventDefault();
+    closeDrawer();
+  }
+  if (act === "clear-q") {
+    event.preventDefault();
+    const input = document.getElementById("top-q");
+    if (input) input.value = "";
+    if (isCatalog(readRoute().path)) applyQuery("", true);
+    else {
+      state.q = "";
+      syncSearch();
+    }
+  }
+  if (act === "reset") {
+    event.preventDefault();
+    state.q = "";
+    state.cat = "";
+    state.src = 0;
+    state.level = 0;
+    state.sort = "stars";
+    state.page = 1;
+    syncSearch();
+    const next = marketHash();
+    if (location.hash !== next) location.hash = next;
+    else paintCatalogShell(readRoute().params);
+  }
+  if (act === "sync") {
+    event.preventDefault();
+    await syncNow();
+  }
+  if (act === "cancel-sync") {
+    event.preventDefault();
+    const { cancelPull } = await import("./live.js?v=20261028c");
+    cancelPull();
+  }
   if (act === "copy") {
     event.preventDefault();
     await copyText(button.dataset.copy || "");
@@ -613,8 +1053,10 @@ document.body.addEventListener("click", async (event) => {
     state.page = Number(button.dataset.page);
     const next = marketHash();
     if (location.hash !== next) location.hash = next;
-    else paintResults();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    else {
+      paintResults();
+      scrollList();
+    }
   }
   if (act === "logout") {
     event.preventDefault();
@@ -719,6 +1161,11 @@ document.body.addEventListener("drop", async (event) => {
 
 window.addEventListener("hashchange", () => { draw(); });
 window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && state.open) {
+    event.preventDefault();
+    closeDrawer();
+    return;
+  }
   if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return;
   if (/input|textarea|select/i.test(event.target.tagName)) return;
   const input = document.getElementById("top-q");
@@ -729,3 +1176,5 @@ window.addEventListener("keydown", (event) => {
 
 if (!location.hash || location.hash === "#/") location.replace("#/market");
 draw();
+watchSources().catch(() => {});
+setInterval(() => { watchSources().catch(() => {}); }, 3 * 60 * 1000);

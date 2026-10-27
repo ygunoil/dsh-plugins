@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: "17 * * * *"
 
 permissions:
   contents: read
@@ -22,6 +24,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Refresh catalog
+        run: |
+          mkdir -p /tmp/dsh-data
+          cp -a public/data/. /tmp/dsh-data/
+          if node scripts/build-site.mjs --refresh; then
+            echo refreshed
+          else
+            rm -rf public/data
+            mkdir -p public/data
+            cp -a /tmp/dsh-data/. public/data/
+            mkdir -p public/engine
+            cp lib/merge.js lib/sources.js public/engine/
+            echo "refresh failed, kept the previous snapshot"
+          fi
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
