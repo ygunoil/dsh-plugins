@@ -63,6 +63,7 @@ let manifest = null;
 let items = [];
 let loaded = false;
 let loading = null;
+let revision = 0;
 const byId = new Map();
 const listeners = new Set();
 
@@ -106,16 +107,19 @@ export async function boot() {
 export function ensureAll() {
   if (loaded) return Promise.resolve(items);
   if (loading) return loading;
+  const rev = revision;
   loading = (async () => {
     const data = await boot();
     const next = [];
     for (let i = 0; i < data.shards.length; i += 4) {
+      if (rev !== revision) return items;
       const group = data.shards.slice(i, i + 4);
       const parts = await Promise.all(group.map(async (shard) => {
         const response = await fetch(`./${shard}`, { cache: "no-cache" });
         if (!response.ok) throw new Error("分片加载失败");
         return response.json();
       }));
+      if (rev !== revision) return items;
       for (const rows of parts) {
         for (const row of rows) next.push(hydrate(row));
       }
@@ -123,11 +127,12 @@ export function ensureAll() {
       byId.clear();
       for (const fn of listeners) fn(items.length, data.total);
     }
+    if (rev !== revision) return items;
     for (const plugin of items) byId.set(plugin.id, plugin);
     loaded = true;
     return items;
   })().catch((error) => {
-    loading = null;
+    if (rev === revision) loading = null;
     throw error;
   });
   return loading;
@@ -203,6 +208,7 @@ export function filterPlugins(list, { q = "", cat = "", src = 0, level = 0, sort
 }
 
 export function replaceItems(plugins, builtAt = new Date().toISOString()) {
+  revision += 1;
   items = plugins.map((plugin) => {
     const next = { ...plugin, local: false };
     next.q = [next.name, next.desc, next.repo, next.npm, next.id, catLabel(next.cat)].filter(Boolean).join("\n").toLowerCase();

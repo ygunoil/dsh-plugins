@@ -21,7 +21,7 @@ import {
   onProgress,
   replaceItems,
   catalogListKey,
-} from "./catalog.js?v=20261028d";
+} from "./catalog.js?v=20261029a";
 import { readPackageJson } from "./zip.js?v=20261027";
 
 const app = document.querySelector("#app");
@@ -1394,5 +1394,5 @@ window.addEventListener("keydown", (event) => {
 
 if (!location.hash || location.hash === "#/") location.replace("#/market");
 draw();
-watchSources().catch(() => {});
+syncNow().catch(() => {});
 setInterval(() => { watchSources().catch(() => {}); }, 3 * 60 * 1000);
