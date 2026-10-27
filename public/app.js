@@ -488,7 +488,7 @@ function pluginHtml(plugin) {
     npmUrl(plugin.npm) ? `<a class="btn btn-ghost" href="${esc(npmUrl(plugin.npm))}" target="_blank" rel="noopener noreferrer">npm</a>` : "",
   ].join("");
   const downloads = [
-    zip ? `<a class="btn" href="${esc(zip)}">下载源码</a>` : "",
+    zip ? `<a class="btn btn-ghost" href="${esc(zip)}">仓库 zip</a>` : "",
     tgz ? `<a class="btn btn-ghost" href="${esc(tgz)}">下载 npm 包</a>` : "",
     plugin.local ? `<button class="btn" type="button" data-act="dl-upload" data-id="${esc(plugin.id)}">下载 zip</button>` : "",
   ].join("");
@@ -783,6 +783,26 @@ function shownVersion(plugin) {
   return match ? match[1] : "";
 }
 
+function installGuide(plugin) {
+  const github = String(plugin.install || "").includes(" github:");
+  const steps = plugin.local
+    ? [
+        "先下载 zip 并解压。这个网页不会把它装进 DSH。",
+        "在解压目录的上一级执行上面的命令。web 是 dsh web 使用的配置。",
+        "装好后重新运行 dsh web。用 dsh plugin --profile web list 确认。",
+      ]
+    : [
+        "复制命令，到能运行 dsh 的终端里执行。网页不会替你安装。",
+        "web 是 dsh web 使用的配置。装好后重新运行 dsh web 才会加载。",
+        "用 dsh plugin --profile web list 确认它已经在列表里。",
+      ];
+  const notes = ["终端里没有 dsh 时，在整条命令前加上 npx @deepseek-ai/dsh。"];
+  if (github) notes.unshift("这是从 GitHub 安装源码。如果提示要允许构建，只在信任这个仓库时允许，然后把命令再执行一次。");
+  if (!plugin.local && plugin.repo) notes.push("「仓库 zip」只是源码压缩包，不能代替上面的安装命令。");
+  return `<ol class="how">${steps.map((step) => `<li>${esc(step)}</li>`).join("")}</ol>
+    <p class="drawer-note muted">${notes.map(esc).join("<br>")}</p>`;
+}
+
 function drawerHtml(plugin) {
   const repoUrl = githubUrl(plugin.repo);
   const zip = repoUrl && plugin.health !== 1 ? `${repoUrl}/archive/HEAD.zip` : "";
@@ -790,7 +810,7 @@ function drawerHtml(plugin) {
   const cat = plugin.cat && plugin.cat !== "other" ? catLabel(plugin.cat) : "未分类";
   const warn = plugin.health ? `<p class="callout">${esc(HEALTH[plugin.health] || "源仓库异常")}</p>` : "";
   const links = [
-    zip ? `<a class="btn" href="${esc(zip)}">下载源码</a>` : "",
+    zip ? `<a class="btn btn-ghost" href="${esc(zip)}">仓库 zip</a>` : "",
     tgz ? `<a class="btn btn-ghost" href="${esc(tgz)}">npm 包</a>` : "",
     plugin.local ? `<button class="btn" type="button" data-act="dl-upload" data-id="${esc(plugin.id)}">下载 zip</button>` : "",
     repoUrl ? `<a class="btn btn-ghost" href="${esc(repoUrl)}" target="_blank" rel="noopener noreferrer">GitHub</a>` : "",
@@ -809,6 +829,7 @@ function drawerHtml(plugin) {
       <h1>${esc(plugin.name)}</h1>
       ${install}
     </div>
+    ${installGuide(plugin)}
     <p class="lede">${esc(plugin.desc || "暂无简介")}</p>
     <p class="meta-line">${repoLine}</p>
     ${warn}
@@ -820,7 +841,7 @@ function drawerHtml(plugin) {
     </div>
     <div class="split">${levelChip(plugin)}${riskChip(plugin)}${plugin.health ? `<span class="pill pill-risk">${esc(HEALTH[plugin.health])}</span>` : ""}${plugin.local ? `<span class="pill">本机</span>` : sourcePills(plugin.src)}</div>
     <div class="actions">${links}</div>
-    <p class="drawer-note muted">命令来自目录，不会在网页里执行。${plugin.dsh ? "等级和风险来自 dsh.so，本站没有复验。" : ""}</p>
+    ${plugin.dsh ? `<p class="drawer-note muted">等级和风险来自 dsh.so，本站没有复验。</p>` : ""}
     <div id="repo-live" class="repo-live" data-repo="${esc(repoUrl)}"><p class="muted">${repoUrl ? "正在读取仓库说明…" : "这条没有 GitHub 仓库。"}</p></div>`;
 }
 

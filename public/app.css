@@ -340,6 +340,8 @@ mark { background: rgba(77, 107, 254, 0.45); color: white; border-radius: 4px; p
 .stat b { display: block; font-size: 16px; font-weight: 600; letter-spacing: -0.03em; overflow-wrap: anywhere; }
 .stat span { color: var(--muted); font-size: 12px; }
 .drawer-note { margin: 10px 0 0; font-size: 12px; line-height: 1.5; }
+.how { margin: 12px 0 0; padding-left: 18px; font-size: 13px; line-height: 1.55; }
+.how li + li { margin-top: 6px; }
 .repo-live { margin: 14px 0; }
 .readme-toggle { margin-top: 8px; }
 .readme {
