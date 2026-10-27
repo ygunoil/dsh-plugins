@@ -23,7 +23,6 @@ import {
   catalogListKey,
 } from "./catalog.js?v=20261028d";
 import { readPackageJson } from "./zip.js?v=20261027";
-import { mountWhale } from "./whale.js?v=20261028y";
 
 const app = document.querySelector("#app");
 const state = { q: "", cat: "", src: 0, level: 0, sort: "stars", page: 1 };
@@ -470,20 +469,19 @@ async function renderMarket(my) {
   if (my !== token) return;
   app.innerHTML = `<section class="page">
     <section class="stage">
-      <canvas class="stage-whale" id="stage-whale" aria-hidden="true"></canvas>
-      <h1>插件目录</h1>
-      <p class="stage-line">给 DeepSeek Harness 找插件</p>
-      <form class="seek" id="seek-form">
-        <label class="seek-box">
-          <svg class="seek-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 16.5 20 20.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-          <input id="seek-q" type="search" placeholder="搜索插件，例如：浏览器、Git、金融、桌面…" autocomplete="off" aria-label="搜索插件" enterkeyhint="search">
-          <button class="btn" type="submit">搜索</button>
-        </label>
+      <p class="stage-news" id="catalog-note">${catalogNote(manifest)}</p>
+      <h1>找到合适的插件</h1>
+      <form class="composer" id="seek-form">
+        <input id="seek-q" type="search" placeholder="搜索插件，例如：浏览器、Git、金融、桌面" autocomplete="off" aria-label="搜索插件" enterkeyhint="search">
+        <div class="composer-bar">
+          <button class="composer-go" type="submit" aria-label="搜索">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6M6.5 11.5 12 6l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
       </form>
       <section class="popular" id="popular" aria-label="热门搜索">
         <div class="popular-grid" id="hot-tags"></div>
       </section>
-      <p class="stage-note" id="catalog-note">${catalogNote(manifest)}</p>
     </section>
     <div class="add-banner">
       <div><b>装进 DSH</b><span>Web 复制终端命令执行。Desktop 保持应用打开，左侧「插件」点「添加插件」，粘贴包名或地址，装完点「立即启用」。不要去设置里装，也不要先退出。两边不互通。</span></div>
@@ -509,7 +507,6 @@ async function renderMarket(my) {
     </div>
     </div>
   </section>`;
-  mountWhale(document.getElementById("stage-whale"));
   const catInput = document.getElementById("cat-q");
   catInput.value = catQuery;
   catInput.addEventListener("input", (event) => {
@@ -867,8 +864,8 @@ async function draw() {
 
 function catalogNote(manifest) {
   const when = day(manifest?.builtAt);
-  if (manifest?.live) return `${num(manifest.total)} 条 · 刚刚从源站同步。Star 是 GitHub 星标，不是安装量。`;
-  return `${num(manifest?.total)} 条 · 构建于 ${when || "未知"}。上方可以同步到最新。Star 是 GitHub 星标，不是安装量。`;
+  if (manifest?.live) return `${num(manifest.total)} 条插件，刚刚与源站同步。Star 是 GitHub 星标，不是安装量。`;
+  return `${num(manifest?.total)} 条插件，构建于 ${when || "未知"}。Star 是 GitHub 星标，不是安装量。`;
 }
 
 function shownVersion(plugin) {
