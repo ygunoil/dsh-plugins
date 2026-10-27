@@ -37,6 +37,7 @@ let queryTimer = 0;
 let composing = false;
 let remoteToken = 0;
 let catQuery = "";
+let hotOpen = true;
 
 const HEALTH = { 1: "源仓库已删除", 2: "源仓库已改名", 3: "源仓库已合并", 4: "topic 已移除" };
 const RISK = { 1: "低", 2: "中", 3: "高", 4: "严重", 5: "待核验" };
@@ -392,13 +393,19 @@ function categoryHit() {
 
 function paintHot() {
   const root = document.getElementById("hot-tags");
-  if (!root) return;
+  const panel = document.getElementById("popular");
+  if (!root || !panel) return;
+  panel.classList.toggle("is-folded", !hotOpen);
+  const fold = panel.querySelector("[data-act='hot-fold']");
+  if (fold) fold.textContent = hotOpen ? "收起" : "展开";
   const q = state.q.trim().toLowerCase();
-  const tags = (getManifest()?.categories || []).filter(([id]) => id && id !== "other").slice(0, 21);
-  root.innerHTML = tags.map(([id]) => {
+  const tags = (getManifest()?.categories || []).filter(([id]) => id && id !== "other").slice(0, 10);
+  root.innerHTML = tags.map(([id], index) => {
     const label = catLabel(id);
     const on = q === label.toLowerCase() || q === String(id).toLowerCase();
-    return `<button type="button" class="hot${on ? " is-on" : ""}" data-act="hot" data-q="${esc(label)}" aria-pressed="${on ? "true" : "false"}">${esc(label)}</button>`;
+    const rank = index + 1;
+    const tone = rank <= 3 ? ` is-${rank}` : "";
+    return `<button type="button" class="pop${on ? " is-on" : ""}" data-act="hot" data-q="${esc(label)}" aria-pressed="${on ? "true" : "false"}"><i class="rank${tone}">${rank}</i><span>${esc(label)}</span></button>`;
   }).join("");
 }
 
@@ -449,17 +456,24 @@ async function renderMarket(my) {
   await loadLocalRows();
   if (my !== token) return;
   app.innerHTML = `<section class="page">
-    <div class="page-head market-head">
-      <h1>插件目录</h1>
-      <p class="muted" id="catalog-note">${catalogNote(manifest)}</p>
-    </div>
-    <form class="seek" id="seek-form">
-      <label class="seek-box">
-        <input id="seek-q" type="search" placeholder="搜索插件，例如：浏览器、Git、金融、桌面…" autocomplete="off" aria-label="搜索插件" enterkeyhint="search">
-      </label>
-      <button class="btn" type="submit">搜索</button>
-    </form>
-    <div class="hot-row" id="hot-tags" aria-label="热门搜索"></div>
+    <section class="stage">
+      <p class="stage-note" id="catalog-note">${catalogNote(manifest)}</p>
+      <form class="seek" id="seek-form">
+        <label class="seek-box">
+          <svg class="seek-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 16.5 20 20.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <input id="seek-q" type="search" placeholder="搜索插件，例如：浏览器、Git、金融、桌面…" autocomplete="off" aria-label="搜索插件" enterkeyhint="search">
+          <button class="btn" type="submit">搜索</button>
+        </label>
+      </form>
+      <section class="popular" id="popular" aria-label="热门搜索">
+        <header>
+          <span class="hot-badge">HOT</span>
+          <b>热门搜索</b>
+          <button type="button" data-act="hot-fold">收起</button>
+        </header>
+        <div class="popular-grid" id="hot-tags"></div>
+      </section>
+    </section>
     <div class="add-banner">
       <div><b>在终端添加到 DSH</b><span>Web 和 Desktop 各装各的，网页不会安装。Desktop 要先打开一次，完全退出后再执行，然后重新打开。</span></div>
       <div class="banner-cmds">
@@ -1186,6 +1200,11 @@ document.body.addEventListener("click", async (event) => {
     event.preventDefault();
     document.querySelector(".readme")?.classList.remove("is-clipped");
     button.remove();
+  }
+  if (act === "hot-fold") {
+    event.preventDefault();
+    hotOpen = !hotOpen;
+    paintHot();
   }
   if (act === "hot") {
     event.preventDefault();
