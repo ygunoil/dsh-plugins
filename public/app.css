@@ -28,7 +28,7 @@ button, input, select { font: inherit; color: inherit; }
 ::selection { background: var(--blue); color: white; }
 :focus-visible { outline: 2px solid var(--blue-2); outline-offset: 2px; }
 
-.wrap { width: min(1280px, calc(100% - 32px)); margin: 0 auto; }
+.wrap { width: auto; margin: 0; padding: 0 28px; }
 .top {
   position: sticky;
   top: 0;
@@ -164,11 +164,15 @@ h2 { margin: 0 0 12px; font-size: 18px; }
 .stage {
   position: relative;
   isolation: isolate;
-  margin: 8px 0 16px;
-  padding: 36px 22px 18px;
+  display: grid;
+  align-content: center;
+  min-height: calc(100dvh - var(--top-h, 68px));
+  margin: 0 -28px;
+  padding: 48px 28px 36px;
   overflow: hidden;
-  border-radius: 28px;
-  border: 1px solid rgba(120, 160, 255, 0.22);
+  border-radius: 0;
+  border: 0;
+  border-bottom: 1px solid rgba(120, 160, 255, 0.22);
   background:
     radial-gradient(1.2px 1.2px at 12% 16%, rgba(255, 255, 255, 0.9), transparent 60%),
     radial-gradient(1px 1px at 22% 28%, rgba(255, 255, 255, 0.45), transparent 60%),
@@ -203,7 +207,7 @@ h2 { margin: 0 0 12px; font-size: 18px; }
   color: #c5d0ff;
   font-size: 13px;
 }
-.stage .seek { display: block; max-width: 820px; margin: 0 auto 14px; }
+.stage .seek { display: block; max-width: min(960px, 100%); margin: 0 auto 14px; }
 .stage .seek-box {
   padding: 6px 6px 6px 16px;
   background: rgba(6, 12, 24, 0.82);
@@ -212,7 +216,7 @@ h2 { margin: 0 0 12px; font-size: 18px; }
 }
 .seek-icon { width: 18px; height: 18px; flex: 0 0 auto; color: #9eb0df; }
 .popular {
-  max-width: 820px;
+  max-width: min(960px, 100%);
   margin: 0 auto;
   overflow: hidden;
   border-radius: 14px;
@@ -535,8 +539,8 @@ mark { background: rgba(77, 107, 254, 0.45); color: white; border-radius: 4px; p
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  width: min(1280px, calc(100% - 32px));
-  margin: 12px auto 0;
+  width: auto;
+  margin: 12px 28px 0;
   padding: 8px 12px;
   border: 1px solid rgba(77, 107, 254, 0.35);
   border-radius: 12px;
@@ -732,7 +736,9 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fo
   .top { flex-wrap: wrap; padding: 12px; }
   .fresh { align-items: flex-start; }
   .nav { order: 3; }
-  .wrap { width: min(1280px, calc(100% - 20px)); }
+  .wrap { padding: 0 16px; }
+  .stage { margin-inline: -16px; padding-inline: 16px; }
+  .fresh { margin-inline: 16px; }
   h1 { font-size: 24px; }
 }
 @media (max-width: 800px) {
