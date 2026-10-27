@@ -479,7 +479,7 @@ function uploadToPlugin(row) {
 
 function pluginHtml(plugin) {
   const repoUrl = githubUrl(plugin.repo);
-  const zip = repoUrl && plugin.health !== 1 ? `${repoUrl}/archive/HEAD.zip` : "";
+  const zip = repoUrl && ![1, 2, 3].includes(plugin.health) ? `${repoUrl}/archive/HEAD.zip` : "";
   const tgz = npmTgz(plugin.npm, plugin.ver);
   const links = [
     repoUrl ? `<a class="btn btn-ghost" href="${esc(repoUrl)}" target="_blank" rel="noopener noreferrer">GitHub</a>` : "",
@@ -777,33 +777,51 @@ function catalogNote(manifest) {
   return `${num(manifest?.total)} 条 · 构建于 ${when || "未知"}。上方可以同步到最新。Star 是 GitHub 星标，不是安装量。`;
 }
 
+function shownVersion(plugin) {
+  if (plugin.ver) return String(plugin.ver);
+  const match = String(plugin.install || "").match(/@(\d+\.\d+\.\d+[0-9A-Za-z.-]*)$/);
+  return match ? match[1] : "";
+}
+
 function drawerHtml(plugin) {
   const repoUrl = githubUrl(plugin.repo);
+  const zip = repoUrl && plugin.health !== 1 ? `${repoUrl}/archive/HEAD.zip` : "";
+  const tgz = npmTgz(plugin.npm, plugin.ver);
   const cat = plugin.cat && plugin.cat !== "other" ? catLabel(plugin.cat) : "未分类";
-  return `<div class="drawer-bar">
-      <a href="${esc(listHash())}" data-act="close">返回列表</a>
-      <button type="button" class="btn btn-ghost" data-act="close">关闭</button>
+  const warn = plugin.health ? `<p class="callout">${esc(HEALTH[plugin.health] || "源仓库异常")}</p>` : "";
+  const links = [
+    zip ? `<a class="btn" href="${esc(zip)}">下载源码</a>` : "",
+    tgz ? `<a class="btn btn-ghost" href="${esc(tgz)}">npm 包</a>` : "",
+    plugin.local ? `<button class="btn" type="button" data-act="dl-upload" data-id="${esc(plugin.id)}">下载 zip</button>` : "",
+    repoUrl ? `<a class="btn btn-ghost" href="${esc(repoUrl)}" target="_blank" rel="noopener noreferrer">GitHub</a>` : "",
+    plugin.dsh ? `<a class="btn btn-ghost" href="${esc(safeUrl(plugin.dsh))}" target="_blank" rel="noopener noreferrer">dsh.so</a>` : "",
+    plugin.page ? `<a class="btn btn-ghost" href="${esc(safeUrl(plugin.page))}" target="_blank" rel="noopener noreferrer">awesome</a>` : "",
+    npmUrl(plugin.npm) ? `<a class="btn btn-ghost" href="${esc(npmUrl(plugin.npm))}" target="_blank" rel="noopener noreferrer">npm</a>` : "",
+  ].join("");
+  const install = plugin.install
+    ? `<div class="install"><code>${esc(plugin.install)}</code><button class="btn" type="button" data-act="copy" data-copy="${esc(plugin.install)}">复制</button></div>`
+    : `<p class="muted">这条没有安装命令。</p>`;
+  const repoLine = repoUrl
+    ? `<a href="${esc(repoUrl)}" target="_blank" rel="noopener noreferrer">${esc(plugin.repo)}</a>`
+    : esc(plugin.npm || "没有公开仓库");
+  return `<div class="drawer-stick">
+      <div class="drawer-bar"><p class="crumb">${esc(cat)}</p><button type="button" class="btn btn-ghost" data-act="close">关闭</button></div>
+      <h1>${esc(plugin.name)}</h1>
+      ${install}
     </div>
-    <p class="crumb">${esc(cat)}</p>
-    <h1>${esc(plugin.name)}</h1>
     <p class="lede">${esc(plugin.desc || "暂无简介")}</p>
-    <div class="split">${levelChip(plugin)}${riskChip(plugin)}${plugin.health ? `<span class="pill pill-risk">${esc(HEALTH[plugin.health])}</span>` : ""}${plugin.local ? `<span class="pill">本机</span>` : sourcePills(plugin.src)}</div>
-    ${plugin.install ? `<div class="install"><code>${esc(plugin.install)}</code><button class="btn" type="button" data-act="copy" data-copy="${esc(plugin.install)}">复制</button></div>` : ""}
-    <div class="actions">
-      ${repoUrl && plugin.health !== 1 ? `<a class="btn" href="${esc(`${repoUrl}/archive/HEAD.zip`)}">下载源码</a>` : ""}
-      ${repoUrl ? `<a class="btn btn-ghost" href="${esc(repoUrl)}" target="_blank" rel="noopener noreferrer">GitHub</a>` : ""}
-      ${plugin.dsh ? `<a class="btn btn-ghost" href="${esc(safeUrl(plugin.dsh))}" target="_blank" rel="noopener noreferrer">dsh.so</a>` : ""}
-      ${npmUrl(plugin.npm) ? `<a class="btn btn-ghost" href="${esc(npmUrl(plugin.npm))}" target="_blank" rel="noopener noreferrer">npm</a>` : ""}
+    <p class="meta-line">${repoLine}</p>
+    ${warn}
+    <div class="stats">
+      <div class="stat"><b id="live-star">${plugin.stars ? esc(compact(plugin.stars)) : "—"}</b><span>Star</span></div>
+      <div class="stat"><b>${plugin.downloads ? esc(compact(plugin.downloads)) : "—"}</b><span>下载</span></div>
+      <div class="stat"><b>${esc(shownVersion(plugin) || "—")}</b><span>版本</span></div>
+      <div class="stat"><b>${esc(plugin.lang || "—")}</b><span>语言</span></div>
     </div>
-    <div id="repo-live" class="repo-live"><p class="muted">${repoUrl ? "正在读取仓库说明…" : "这条没有 GitHub 仓库。"}</p></div>
-    <div class="facts">
-      <div><span>仓库</span><b>${esc(plugin.repo || "—")}</b></div>
-      <div><span>包名</span><b>${esc(plugin.npm || "—")}</b></div>
-      <div><span>版本</span><b>${esc(plugin.ver || "—")}</b></div>
-      <div><span>Star</span><b>${plugin.stars ? esc(compact(plugin.stars)) : "—"}</b></div>
-      <div><span>下载量</span><b>${plugin.downloads ? esc(compact(plugin.downloads)) : "—"}</b></div>
-      <div><span>语言</span><b>${esc(plugin.lang || "—")}</b></div>
-    </div>`;
+    <div class="split">${levelChip(plugin)}${riskChip(plugin)}${plugin.health ? `<span class="pill pill-risk">${esc(HEALTH[plugin.health])}</span>` : ""}${plugin.local ? `<span class="pill">本机</span>` : sourcePills(plugin.src)}</div>
+    <div class="actions">${links}</div>
+    <p class="drawer-note muted">命令来自目录，不会在网页里执行。${plugin.dsh ? "等级和风险来自 dsh.so，本站没有复验。" : ""}</p>
+    <div id="repo-live" class="repo-live" data-repo="${esc(repoUrl)}"><p class="muted">${repoUrl ? "正在读取仓库说明…" : "这条没有 GitHub 仓库。"}</p></div>`;
 }
 
 function closeDrawer() {
@@ -817,9 +835,22 @@ async function renderDrawer() {
   const id = state.open;
   document.body.classList.toggle("with-drawer", Boolean(id));
   let drawer = document.getElementById("drawer");
+  let backdrop = document.getElementById("drawer-backdrop");
   if (!id) {
     drawer?.remove();
+    backdrop?.remove();
     return;
+  }
+  const top = document.querySelector(".top");
+  if (top) document.documentElement.style.setProperty("--top-h", `${Math.ceil(top.getBoundingClientRect().height)}px`);
+  if (!backdrop) {
+    backdrop = document.createElement("button");
+    backdrop.id = "drawer-backdrop";
+    backdrop.className = "drawer-backdrop";
+    backdrop.type = "button";
+    backdrop.dataset.act = "close";
+    backdrop.setAttribute("aria-label", "关闭详情");
+    document.body.appendChild(backdrop);
   }
   if (!drawer) {
     drawer = document.createElement("aside");
@@ -844,21 +875,35 @@ async function renderDrawer() {
   }
   drawer.innerHTML = drawerHtml(plugin);
   drawer.dataset.ready = "1";
+  document.title = `${plugin.name} · DSH Plugins`;
   drawer.scrollTop = 0;
   loadRemote(plugin);
 }
 
-function inlineReadme(text) {
-  const re = /(`[^`]+`)|\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)|\*\*([^*]+)\*\*/g;
+function readmeHref(url, repoUrl) {
+  const raw = String(url || "").trim();
+  if (!raw || raw.startsWith("#") || /^javascript:/i.test(raw)) return "";
+  if (/^https?:\/\//i.test(raw)) return safeUrl(raw);
+  if (!repoUrl || raw.includes("..")) return "";
+  const hashAt = raw.indexOf("#");
+  const hash = hashAt === -1 ? "" : raw.slice(hashAt);
+  const path = (hashAt === -1 ? raw : raw.slice(0, hashAt)).replace(/^\.\//, "").replace(/^\/+/, "");
+  if (!path) return "";
+  return safeUrl(`${repoUrl}/blob/HEAD/${path}${hash}`);
+}
+
+function inlineReadme(text, repoUrl) {
+  const re = /(`[^`]+`)|!\[([^\]]*)\]\(([^)\s]+)\)|\[([^\]]+)\]\(([^)\s]+)\)|\*\*([^*]+)\*\*/g;
   let html = "";
   let last = 0;
   for (const match of text.matchAll(re)) {
     html += esc(text.slice(last, match.index));
     if (match[1]) html += `<code>${esc(match[1].slice(1, -1))}</code>`;
-    else if (match[3]) {
-      const url = safeUrl(match[3]);
-      html += url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(match[2])}</a>` : esc(match[0]);
-    } else if (match[4]) html += `<strong>${esc(match[4])}</strong>`;
+    else if (match[3] && match[2] != null && !match[4]) html += "";
+    else if (match[5]) {
+      const url = readmeHref(match[5], repoUrl);
+      html += url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(match[4])}</a>` : esc(match[4]);
+    } else if (match[6]) html += `<strong>${inlineReadme(match[6], repoUrl)}</strong>`;
     last = match.index + match[0].length;
   }
   html += esc(text.slice(last));
@@ -866,15 +911,21 @@ function inlineReadme(text) {
 }
 
 function readableSource(raw) {
-  const text = String(raw || "").replace(/\r\n/g, "\n");
+  let text = String(raw || "").replace(/\r\n/g, "\n");
   if (!/<\/?[a-z][\s\S]*?>/i.test(text)) return text;
-  return text
+  text = text
     .replace(/<script[\s\S]*?<\/script>/gi, "")
     .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<a\s+[^>]*href="https?:\/\/[^"]+"[^>]*>\s*<img\b[\s\S]*?<\/a>/gi, "")
+    .replace(/<img\b[^>]*>/gi, "")
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<h([1-3])[^>]*>/gi, (_, level) => `\n${"#".repeat(Number(level))} `)
     .replace(/<li[^>]*>/gi, "\n- ")
-    .replace(/<a\s+[^>]*href="(https?:\/\/[^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href, label) => `[${label.replace(/<[^>]+>/g, "")}](${href})`)
+    .replace(/<a\s+[^>]*href="(https?:\/\/[^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href, label) => {
+      const name = label.replace(/<[^>]+>/g, "").trim();
+      return name ? `[${name}](${href})` : "";
+    })
+    .replace(/<\/?code[^>]*>/gi, "")
     .replace(/<\/(p|div|h[1-6]|li|tr|pre|blockquote)>/gi, "\n")
     .replace(/<[^>]+>/g, "")
     .replace(/&nbsp;/g, " ")
@@ -883,10 +934,36 @@ function readableSource(raw) {
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'");
+  return text;
 }
 
-function renderReadme(raw) {
-  const text = readableSource(raw).slice(0, 8000);
+function stripBadges(text) {
+  let out = text;
+  let prev = "";
+  const badge = /\[!\[[^\]]*\]\([^)\n]*\)\]\([^)\n]*\)|!\[[^\]]*\]\([^)\n]*\)/g;
+  while (out !== prev) {
+    prev = out;
+    badge.lastIndex = 0;
+    out = out.replace(badge, "");
+  }
+  return out.replace(/\[\]\([^)\n]*\)/g, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n");
+}
+
+function isLinkDump(lines) {
+  const raw = lines.join("\n");
+  const links = raw.match(/\]\(/g) || [];
+  if (links.length < 4) return false;
+  const rest = raw.replace(/\[[^\]]+\]\([^)]+\)/g, "").replace(/[\s·|*#\-_*]/g, "");
+  return rest.length < 16;
+}
+
+function linkDumpTitle(lines) {
+  const hrefs = [...lines.join("\n").matchAll(/\]\(([^)]+)\)/g)].map((match) => match[1]);
+  return hrefs.length && hrefs.every((href) => href.startsWith("#")) ? "本页目录" : "更多链接";
+}
+
+function renderReadme(raw, repoUrl) {
+  const text = stripBadges(readableSource(raw)).slice(0, 8000);
   const blocks = text.split("```");
   return blocks.map((block, index) => {
     if (index % 2 === 1) {
@@ -897,23 +974,38 @@ function renderReadme(raw) {
     return block.split(/\n{2,}/).map((para) => {
       const lines = para.split("\n").filter((line) => line.trim());
       if (!lines.length) return "";
-      const heading = lines.length === 1 ? lines[0].match(/^(#{1,3})\s+(.+)$/) : null;
-      if (heading) return `<h${heading[1].length + 2}>${inlineReadme(heading[2])}</h${heading[1].length + 2}>`;
-      if (lines.every((line) => /^\s*[-*]\s+/.test(line))) {
-        return `<ul>${lines.map((line) => `<li>${inlineReadme(line.replace(/^\s*[-*]\s+/, ""))}</li>`).join("")}</ul>`;
+      if (isLinkDump(lines)) {
+        return `<details class="readme-more"><summary>${linkDumpTitle(lines)}</summary><p>${inlineReadme(lines.join(" "), repoUrl)}</p></details>`;
       }
-      return `<p>${lines.map((line) => inlineReadme(line)).join("<br>")}</p>`;
+      if (lines.every((line) => /^>\s?/.test(line))) {
+        const body = lines
+          .map((line) => line.replace(/^>\s?/, "").replace(/^\[!(IMPORTANT|NOTE|WARNING|TIP)\]\s*/, ""))
+          .filter(Boolean);
+        return `<div class="readme-note">${body.map((line) => `<p>${inlineReadme(line, repoUrl)}</p>`).join("")}</div>`;
+      }
+      const heading = lines.length === 1 ? lines[0].match(/^(#{1,3})\s+(.+)$/) : null;
+      if (heading) return `<h${heading[1].length + 2}>${inlineReadme(heading[2], repoUrl)}</h${heading[1].length + 2}>`;
+      if (lines.every((line) => /^\s*[-*]\s+/.test(line))) {
+        return `<ul>${lines.map((line) => `<li>${inlineReadme(line.replace(/^\s*[-*]\s+/, ""), repoUrl)}</li>`).join("")}</ul>`;
+      }
+      return `<p>${lines.map((line) => inlineReadme(line, repoUrl)).join("<br>")}</p>`;
     }).join("");
   }).join("");
 }
 
 function paintRemote(slot, data) {
-  const when = data.pushed ? `仓库更新于 ${esc(day(data.pushed))}。` : "";
-  const stars = data.stars != null ? `当前 Star ${esc(compact(data.stars))}。` : "";
+  const star = document.getElementById("live-star");
+  if (star && data.stars != null) star.textContent = compact(data.stars);
+  const when = data.pushed ? `仓库更新于 ${esc(day(data.pushed))}` : "说明来自 GitHub";
   const body = data.readme
-    ? `<div class="readme">${renderReadme(data.readme)}</div>`
-    : `<p class="muted">仓库没有可读取的 README。</p>`;
-  slot.innerHTML = `<p class="muted">${when}${stars}说明来自 GitHub。</p>${body}`;
+    ? `<div class="readme"><p class="muted">${when}</p>${renderReadme(data.readme, slot.dataset.repo || "")}</div>`
+    : `<p class="muted">${when}。仓库没有可读取的 README。</p>`;
+  slot.innerHTML = body;
+  const readme = slot.querySelector(".readme");
+  if (readme && readme.scrollHeight > 560) {
+    readme.classList.add("is-clipped");
+    slot.insertAdjacentHTML("beforeend", `<button type="button" class="btn btn-ghost readme-toggle" data-act="readme-more">展开全文</button>`);
+  }
 }
 
 async function loadRemote(plugin) {
@@ -921,7 +1013,7 @@ async function loadRemote(plugin) {
   const repoUrl = githubUrl(plugin.repo);
   if (!slot || !repoUrl) return;
   const mine = ++remoteToken;
-  const cacheKey = `dsh-repo:3:${plugin.repo}`;
+  const cacheKey = `dsh-repo:4:${plugin.repo}`;
   try {
     const cached = JSON.parse(sessionStorage.getItem(cacheKey) || "null");
     if (cached && Date.now() - cached.at < 10 * 60 * 1000) {
@@ -1094,6 +1186,11 @@ document.body.addEventListener("click", async (event) => {
   if (act === "close") {
     event.preventDefault();
     closeDrawer();
+  }
+  if (act === "readme-more") {
+    event.preventDefault();
+    document.querySelector(".readme")?.classList.remove("is-clipped");
+    button.remove();
   }
   if (act === "clear-q") {
     event.preventDefault();
