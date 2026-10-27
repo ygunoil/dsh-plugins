@@ -469,7 +469,12 @@ async function renderMarket(my) {
   if (my !== token) return;
   app.innerHTML = `<section class="page">
     <section class="stage">
-      <p class="stage-note" id="catalog-note">${catalogNote(manifest)}</p>
+      <svg class="stage-mark" viewBox="0 0 64 64" aria-hidden="true">
+        <path fill="currentColor" d="M8 40c7-14 20-18 32-9 5 3 9 2 14-4-3 10-8 12-13 14 6 2 8 7 6 12-8-2-13-1-18 4-9 2-20-3-21-17z"/>
+        <circle cx="42" cy="29" r="2.2" fill="#fff"/>
+      </svg>
+      <h1>插件目录</h1>
+      <p class="stage-line">给 DeepSeek Harness 找插件</p>
       <form class="seek" id="seek-form">
         <label class="seek-box">
           <svg class="seek-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M16 16.5 20 20.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -478,13 +483,9 @@ async function renderMarket(my) {
         </label>
       </form>
       <section class="popular" id="popular" aria-label="热门搜索">
-        <header>
-          <span class="hot-badge">HOT</span>
-          <b>热门搜索</b>
-          <button type="button" data-act="hot-fold">收起</button>
-        </header>
         <div class="popular-grid" id="hot-tags"></div>
       </section>
+      <p class="stage-note" id="catalog-note">${catalogNote(manifest)}</p>
     </section>
     <div class="add-banner">
       <div><b>装进 DSH</b><span>Web 复制终端命令执行。Desktop 保持应用打开，左侧「插件」点「添加插件」，粘贴包名或地址，装完点「立即启用」。不要去设置里装，也不要先退出。两边不互通。</span></div>
