@@ -20,9 +20,8 @@ import {
   isLoaded,
   onProgress,
   replaceItems,
-  SOURCES,
   catalogListKey,
-} from "./catalog.js?v=20261028c";
+} from "./catalog.js?v=20261028d";
 import { readPackageJson } from "./zip.js?v=20261027";
 
 const app = document.querySelector("#app");
@@ -37,6 +36,7 @@ let syncing = false;
 let queryTimer = 0;
 let composing = false;
 let remoteToken = 0;
+let catQuery = "";
 
 const HEALTH = { 1: "源仓库已删除", 2: "源仓库已改名", 3: "源仓库已合并", 4: "topic 已移除" };
 const RISK = { 1: "低", 2: "中", 3: "高", 4: "严重", 5: "待核验" };
@@ -170,11 +170,6 @@ function markNav(path) {
   });
 }
 
-function option(value, label, current) {
-  const selected = String(value) === String(current) ? " selected" : "";
-  return `<option value="${esc(value)}"${selected}>${esc(label)}</option>`;
-}
-
 function sourcePills(src) {
   return SOURCE_LABEL.filter(([bit]) => src & bit).map(([, label]) => `<span class="pill">${label}</span>`).join("");
 }
@@ -263,15 +258,106 @@ function currentPage(filtered) {
   return { page: shown, pages, slice: filtered.slice(start, start + pageSize) };
 }
 
-function categoryOptions() {
-  const manifest = getManifest();
-  const cats = (manifest?.categories || []).map(([id, count]) => option(id, `${catLabel(id)} · ${num(count)}`, state.cat)).join("");
-  return `${option("", "全部", state.cat)}${cats}`;
+function categoryGroups() {
+  const rows = getManifest()?.categories || [];
+  return {
+    named: rows.filter(([id]) => id && id !== "other"),
+    other: rows.find(([id]) => id === "other"),
+    total: getManifest()?.total || 0,
+  };
+}
+
+const CAT_LANES = [
+  ["界面", ["ui", "theme", "vision", "media", "voice", "content", "desktop"]],
+  ["开发", ["developer", "dev", "terminal", "git", "wsl", "tools", "launcher"]],
+  ["智能", ["ai", "model", "agi", "skill", "usage"]],
+  ["知识", ["knowledge", "docs", "data", "storage", "memory"]],
+  ["流程", ["automation", "workflow", "session", "productivity", "notify"]],
+  ["连接", ["browser", "network", "remote", "security", "identity"]],
+  ["场景", ["finance", "fun", "game", "market"]],
+];
+
+function catButton(id, label, count, feature, max) {
+  const on = state.cat === id;
+  const share = id ? Math.max(8, Math.round((count / max) * 100)) : 100;
+  const figure = feature ? `<strong>${num(count)}</strong>` : `<small>${num(count)}</small>`;
+  return `<button type="button" class="cat-chip${feature ? " is-feature" : ""}${on ? " is-on" : ""}" data-act="cat" data-cat="${esc(id)}" data-cat-item data-label="${esc(`${label} ${id}`)}" style="--share:${share}%" aria-pressed="${on ? "true" : "false"}"><b>${esc(label)}</b>${figure}<i></i></button>`;
+}
+
+function catLane(name, chips, extra = "") {
+  if (!chips) return "";
+  return `<div class="cat-lane${extra}" data-cat-lane><h3>${esc(name)}</h3><div class="cat-row">${chips}</div></div>`;
+}
+
+function paintCats() {
+  const body = document.getElementById("cat-body");
+  if (!body) return;
+  const { named, other, total } = categoryGroups();
+  const counts = new Map(named.map(([id, count]) => [id, count]));
+  if (other) counts.set("other", other[1]);
+  const max = Math.max(...named.map(([, count]) => count), 1);
+  const featuredIds = named.slice(0, 6).map(([id]) => id);
+  const featured = new Set(featuredIds);
+  const used = new Set(featuredIds);
+  const lanes = CAT_LANES.map(([name, ids]) => {
+    const visible = ids.filter((id) => counts.has(id) && !featured.has(id));
+    visible.forEach((id) => used.add(id));
+    return catLane(name, visible.map((id) => catButton(id, catLabel(id), counts.get(id), false, max)).join(""));
+  }).join("");
+  const stray = named.filter(([id]) => !used.has(id));
+  const strayHtml = catLane("更多", stray.map(([id, count]) => catButton(id, catLabel(id), count, false, max)).join(""));
+  const otherHtml = other ? catLane("未归类", catButton("other", "其他", other[1], false, max)) : "";
+  const hot = `${catButton("", "全部", total, true, max)}${featuredIds.map((id) => catButton(id, catLabel(id), counts.get(id), true, max)).join("")}`;
+  body.innerHTML = `${catLane("常用", hot, " is-hot")}<div class="cat-lanes">${lanes}${strayHtml}${otherHtml}</div>`;
+  applyCatFilter();
+}
+
+function applyCatFilter() {
+  const needle = catQuery.trim().toLowerCase();
+  const items = [...document.querySelectorAll("#cat-body [data-cat-item]")];
+  for (const item of items) {
+    const hay = (item.dataset.label || "").toLowerCase();
+    item.hidden = Boolean(needle) && !hay.includes(needle);
+  }
+  for (const lane of document.querySelectorAll("#cat-body [data-cat-lane]")) {
+    lane.hidden = ![...lane.querySelectorAll("[data-cat-item]")].some((item) => !item.hidden);
+  }
+  const visible = items.filter((item) => !item.hidden && item.dataset.cat).length;
+  const empty = document.getElementById("cat-empty");
+  if (empty) empty.hidden = !needle || visible > 0;
+  const status = document.getElementById("cat-status");
+  if (!status) return;
+  if (needle) status.textContent = visible ? `匹配 ${visible} 个分类，回车直接看` : "没有这个分类";
+  else if (state.cat) status.textContent = `${catLabel(state.cat)} · 再点一次取消`;
+  else status.textContent = "点选分类，也可以和顶部搜索一起用";
+}
+
+function segButton(act, value, label, on) {
+  return `<button type="button" class="seg${on ? " is-on" : ""}" data-act="${act}" data-value="${esc(value)}" aria-pressed="${on ? "true" : "false"}">${esc(label)}</button>`;
+}
+
+function paintFilters() {
+  const root = document.getElementById("filters");
+  if (!root) return;
+  const sources = [[0, "全部"], [1, "topic"], [2, "market"], [4, "awesome"], [8, "工坊"], [16, "dsh.so"], [32, "本机"]];
+  const levels = [[0, "全部"], [5, "L5"], [4, "L4"], [3, "L3"], [2, "L2"], [1, "L1"]];
+  const sorts = [["stars", "Star"], ["level", "等级"], ["downloads", "下载"], ["name", "名称"]];
+  const group = (label, html) => `<div class="seg-group"><span>${label}</span><div>${html}</div></div>`;
+  root.innerHTML = [
+    group("来源", sources.map(([value, label]) => segButton("src", value, label, state.src === value)).join("")),
+    group("等级", levels.map(([value, label]) => segButton("level", value, label, state.level === value)).join("")),
+    group("排序", sorts.map(([value, label]) => segButton("sort", value, label, (state.sort || "stars") === value)).join("")),
+  ].join("");
 }
 
 function fillCategories() {
-  const select = document.getElementById("cat");
-  if (select) select.innerHTML = categoryOptions();
+  paintCats();
+}
+
+function categoryHit() {
+  const needle = state.q.trim().toLowerCase();
+  if (!needle || needle.includes(" ")) return null;
+  return (getManifest()?.categories || []).find(([id]) => id !== "other" && (id === needle || catLabel(id).toLowerCase() === needle)) || null;
 }
 
 function paintResults() {
@@ -283,12 +369,17 @@ function paintResults() {
   const { page, pages, slice } = currentPage(filtered);
   const loading = !isLoaded() && state.src !== 32;
   const filtering = Boolean(state.q.trim() || state.cat || state.src || state.level || (state.sort && state.sort !== "stars"));
+  const catName = state.cat ? catLabel(state.cat) : "";
+  const hit = categoryHit();
+  const suggest = hit && hit[0] !== state.cat
+    ? `<button type="button" class="text-btn" data-act="use-cat" data-cat="${esc(hit[0])}">改看「${esc(catLabel(hit[0]))}」分类</button>`
+    : "";
   const progress = loading
     ? `已载入 ${num(getItems().length)} / ${num(manifest?.total)}`
-    : `${num(filtered.length)} 条${state.q.trim() ? " · 相关的排在前面" : ""}`;
+    : `${catName ? `${catName} · ` : ""}${num(filtered.length)} 条${state.q.trim() ? " · 相关的排在前面" : ""}`;
   const empty = loading ? "正在载入目录…" : `没有匹配的插件。${filtering ? "可以清除条件后再找。" : ""}`;
   const clear = filtering ? `<button type="button" class="text-btn" data-act="reset">清除条件</button>` : "";
-  root.innerHTML = `<div class="result-bar"><span>${progress}</span><span>${clear}第 ${num(page)} / ${num(pages)} 页</span></div>
+  root.innerHTML = `<div class="result-bar"><span>${progress}</span><span>${suggest}${clear}第 ${num(page)} / ${num(pages)} 页</span></div>
     <div class="grid">${slice.map(card).join("") || `<p class="empty">${empty}</p>`}</div>
     ${pager(page, pages)}`;
   renderedListKey = stateListKey();
@@ -314,38 +405,39 @@ async function renderMarket(my) {
       <h1>插件目录</h1>
       <p class="muted" id="catalog-note">${catalogNote(manifest)}</p>
     </div>
-    <form class="toolbar" data-form="market-filters">
-      <label class="field"><span>分类</span><select id="cat" aria-label="分类">${categoryOptions()}</select></label>
-      <label class="field"><span>来源</span><select id="src" aria-label="来源">
-        ${option(0, "全部", state.src)}
-        ${SOURCES.map((source) => option(source.bit, source.name, state.src)).join("")}
-        ${option(32, "只看本机", state.src)}
-      </select></label>
-      <label class="field"><span>dsh.so</span><select id="lv" aria-label="dsh.so 等级">
-        ${option(0, "全部等级", state.level)}
-        ${[5, 4, 3, 2, 1].map((level) => option(level, `L${level}`, state.level)).join("")}
-      </select></label>
-      <label class="field"><span>排序</span><select id="sort" aria-label="排序">
-        ${option("stars", "Star", state.sort)}
-        ${option("level", "dsh.so 等级", state.sort)}
-        ${option("downloads", "下载量", state.sort)}
-        ${option("name", "名称", state.sort)}
-      </select></label>
-    </form>
+    <section class="cat-board" id="cats" aria-label="分类">
+      <div class="cat-head"><span>分类</span><span id="cat-status"></span></div>
+      <label class="cat-find">
+        <input id="cat-q" type="search" placeholder="找分类，如 浏览器、金融、Git" autocomplete="off" aria-label="找分类" enterkeyhint="search">
+      </label>
+      <div id="cat-body"></div>
+      <p class="cat-empty" id="cat-empty" hidden>没有这个分类</p>
+    </section>
+    <div class="filter-strip" id="filters" aria-label="来源、等级和排序"></div>
     <div id="results"></div>
   </section>`;
-  for (const id of ["cat", "src", "lv", "sort"]) {
-    document.getElementById(id).addEventListener("change", (event) => {
-      if (id === "cat") state.cat = event.target.value;
-      if (id === "src") state.src = Number(event.target.value);
-      if (id === "lv") state.level = Number(event.target.value);
-      if (id === "sort") state.sort = event.target.value;
-      state.page = 1;
-      const next = marketHash();
-      if (location.hash !== next) location.hash = next;
-      else paintResults();
-    });
-  }
+  const catInput = document.getElementById("cat-q");
+  catInput.value = catQuery;
+  catInput.addEventListener("input", (event) => {
+    catQuery = event.target.value;
+    applyCatFilter();
+  });
+  catInput.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      if (!catQuery) return;
+      event.preventDefault();
+      catQuery = "";
+      event.target.value = "";
+      applyCatFilter();
+      return;
+    }
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    const first = [...document.querySelectorAll("#cat-body [data-cat-item]:not([hidden])")].find((item) => item.dataset.cat);
+    if (first) first.click();
+  });
+  paintCats();
+  paintFilters();
   paintResults();
   renderDrawer();
   if (unsub) unsub();
@@ -613,15 +705,8 @@ function paintCatalogShell(params) {
   syncSearch();
   markNav("/market");
   renderSession();
-  for (const [id, value] of [
-    ["cat", state.cat],
-    ["src", String(state.src)],
-    ["lv", String(state.level)],
-    ["sort", state.sort || "stars"],
-  ]) {
-    const el = document.getElementById(id);
-    if (el && el.value !== value) el.value = value;
-  }
+  paintCats();
+  paintFilters();
   paintResults();
   const plugin = state.open ? (getById(state.open) || localRows.find((item) => item.id === state.open)) : null;
   document.title = plugin ? `${plugin.name} · DSH Plugins` : "目录 · DSH Plugins";
@@ -893,7 +978,7 @@ async function syncNow() {
   syncing = true;
   setFresh("正在从四个源站同步…", cancelButton());
   try {
-    const { pullLive } = await import("./live.js?v=20261028c");
+    const { pullLive } = await import("./live.js?v=20261028d");
     const { items, stamps } = await pullLive((message) => setFresh(message, cancelButton()));
     const builtAt = new Date().toISOString();
     replaceItems(items, builtAt);
@@ -930,7 +1015,7 @@ async function watchSources() {
       ? `构建于 ${day(manifest.builtAt) || "未知"}，已经不是最新。`
       : `构建于 ${day(manifest.builtAt) || "未知"}。源站有变化时可以马上同步。`, button);
   }
-  const { probeSources } = await import("./live.js?v=20261028c");
+  const { probeSources } = await import("./live.js?v=20261028d");
   const changed = await probeSources(manifest.upstream);
   if (syncing) return;
   if (changed.length) setFresh(`源站有更新：${changed.join("、")}。`, syncButton("立即同步"));
@@ -1020,6 +1105,37 @@ document.body.addEventListener("click", async (event) => {
       syncSearch();
     }
   }
+  if (act === "cat" || act === "src" || act === "level" || act === "sort") {
+    event.preventDefault();
+    if (act === "cat") {
+      const nextCat = button.dataset.cat || "";
+      state.cat = state.cat === nextCat ? "" : nextCat;
+      catQuery = "";
+      const input = document.getElementById("cat-q");
+      if (input) input.value = "";
+    }
+    if (act === "src") state.src = Number(button.dataset.value);
+    if (act === "level") state.level = Number(button.dataset.value);
+    if (act === "sort") state.sort = button.dataset.value || "stars";
+    state.page = 1;
+    const next = marketHash();
+    if (location.hash !== next) location.hash = next;
+    else {
+      if (act === "cat") paintCats();
+      else paintFilters();
+      paintResults();
+    }
+  }
+  if (act === "use-cat") {
+    event.preventDefault();
+    state.cat = button.dataset.cat || "";
+    state.q = "";
+    state.page = 1;
+    syncSearch();
+    const next = marketHash();
+    if (location.hash !== next) location.hash = next;
+    else paintCatalogShell(readRoute().params);
+  }
   if (act === "reset") {
     event.preventDefault();
     state.q = "";
@@ -1039,7 +1155,7 @@ document.body.addEventListener("click", async (event) => {
   }
   if (act === "cancel-sync") {
     event.preventDefault();
-    const { cancelPull } = await import("./live.js?v=20261028c");
+    const { cancelPull } = await import("./live.js?v=20261028d");
     cancelPull();
   }
   if (act === "copy") {
