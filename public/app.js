@@ -818,6 +818,11 @@ function stateListKey() {
 
 function scrollList() {
   const behavior = matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+  const results = document.getElementById("results");
+  if (document.body.classList.contains("is-market") && results) {
+    results.scrollTo({ top: 0, behavior });
+    return;
+  }
   window.scrollTo({ top: 0, behavior });
 }
 
@@ -836,6 +841,7 @@ async function draw() {
   const route = readRoute();
   const path = route.path;
   const params = route.params;
+  document.body.classList.toggle("is-market", isCatalog(path));
   const top = document.querySelector(".top");
   if (top) document.documentElement.style.setProperty("--top-h", `${Math.ceil(top.getBoundingClientRect().height)}px`);
   if (isCatalog(path) && params.get("id")) {
@@ -878,6 +884,7 @@ async function draw() {
     else renderNotFound();
   } catch (error) {
     if (my !== token) return;
+    document.body.classList.remove("is-market");
     app.innerHTML = `<section class="page panel"><h1>页面没有打开</h1><p class="err">${esc(error.message || "未知错误")}</p></section>`;
   }
 }
