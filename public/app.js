@@ -229,13 +229,29 @@ function withProfile(install, profile) {
   return profile === "desktop" ? text.replace("--profile web", "--profile desktop") : text;
 }
 
+function isRelativeInstall(target) {
+  return target.startsWith("./") || target.startsWith("../");
+}
+
+function desktopSpec(install) {
+  const target = addTarget(install);
+  return isRelativeInstall(target) ? "" : target;
+}
+
 function installRows(install) {
   if (!install) return `<p class="muted">这条没有安装命令。</p>`;
+  const target = addTarget(install);
+  const desktop = isRelativeInstall(target)
+    ? ["Desktop", "解压目录的绝对路径", "在 Desktop 侧栏「插件 → 添加插件」粘贴绝对路径，不要粘贴 ./目录名", ""]
+    : ["Desktop", target, "粘贴到 Desktop 侧栏「插件 → 添加插件」。应用保持打开，装完点「立即启用」", target];
   const rows = [
-    ["Web", withProfile(install, "web"), "复制后在终端执行，然后重新运行 dsh web"],
-    ["Desktop", withProfile(install, "desktop"), "先打开一次 Desktop 并完全退出，再执行。重新打开后生效"],
+    ["Web", withProfile(install, "web"), "复制后在终端执行，然后重新运行 dsh web", withProfile(install, "web")],
+    desktop,
   ];
-  return `<div class="install-pair">${rows.map(([label, command, title]) => `<div class="install"><span class="install-tag">${label}</span><code>${esc(command)}</code><button class="btn" type="button" data-act="copy" data-copy="${esc(command)}" title="${esc(title)}">复制</button></div>`).join("")}</div>`;
+  return `<div class="install-pair">${rows.map(([label, command, title, copy]) => {
+    const button = copy ? `<button class="btn" type="button" data-act="copy" data-copy="${esc(copy)}" title="${esc(title)}">复制</button>` : "";
+    return `<div class="install"><span class="install-tag">${label}</span><code title="${esc(title)}">${esc(command)}</code>${button}</div>`;
+  }).join("")}</div>`;
 }
 
 function card(plugin) {
@@ -244,7 +260,7 @@ function card(plugin) {
   const health = plugin.health ? `<span class="pill pill-risk">${esc(HEALTH[plugin.health] || "异常")}</span>` : "";
   const sources = plugin.local ? `<span class="pill">本机</span>` : sourcePills(plugin.src);
   const command = plugin.install
-    ? `<div class="card-add"><code title="${esc(plugin.install)}">${esc(addTarget(plugin.install))}</code><span class="add-btns"><button class="btn" type="button" data-act="copy" data-copy="${esc(withProfile(plugin.install, "web"))}" title="复制 Web 命令">Web</button><button class="btn btn-ghost" type="button" data-act="copy" data-copy="${esc(withProfile(plugin.install, "desktop"))}" title="复制 Desktop 命令。先完全退出 Desktop">Desktop</button></span></div>`
+    ? `<div class="card-add"><code title="${esc(plugin.install)}">${esc(addTarget(plugin.install))}</code><span class="add-btns"><button class="btn" type="button" data-act="copy" data-copy="${esc(withProfile(plugin.install, "web"))}" title="复制 Web 命令">Web</button>${desktopSpec(plugin.install) ? `<button class="btn btn-ghost" type="button" data-act="copy" data-copy="${esc(desktopSpec(plugin.install))}" title="粘贴到 Desktop 侧栏「插件 → 添加插件」，装完点「立即启用」">Desktop</button>` : ""}</span></div>`
     : "";
   return `<article class="card${plugin.health === 1 ? " is-dead" : ""}">
     <a class="card-main" href="${esc(pluginHref(plugin.id))}">
@@ -475,10 +491,10 @@ async function renderMarket(my) {
       </section>
     </section>
     <div class="add-banner">
-      <div><b>在终端添加到 DSH</b><span>Web 和 Desktop 各装各的，网页不会安装。Desktop 要先打开一次，完全退出后再执行，然后重新打开。</span></div>
+      <div><b>装进 DSH</b><span>Web 复制终端命令执行。Desktop 保持应用打开，左侧「插件」点「添加插件」，粘贴包名或地址，装完点「立即启用」。不要去设置里装，也不要先退出。两边不互通。</span></div>
       <div class="banner-cmds">
         <code>dsh plugin --profile web add …</code>
-        <code>dsh plugin --profile desktop add …</code>
+        <code>侧栏「插件」→ 添加插件</code>
       </div>
     </div>
     <div class="market">
@@ -616,7 +632,7 @@ function pluginHtml(plugin) {
         </div>
         <div class="split">${levelChip(plugin)}${riskChip(plugin)}${plugin.health ? `<span class="pill pill-risk">${esc(HEALTH[plugin.health])}</span>` : ""}${plugin.local ? `<span class="pill">本机</span>` : sourcePills(plugin.src)}</div>
         <div class="actions">${links}</div>
-        <p class="drawer-note muted">${plugin.local ? "下载 zip 后，到终端分别执行 Web 和 Desktop 命令。网页不会安装。" : `两条命令都在终端执行，配置不互通。${zip ? "仓库 zip 只是源码。" : ""}${plugin.dsh ? "等级和风险来自 dsh.so，本站没有复验。" : ""}`}</p>
+        <p class="drawer-note muted">${plugin.local ? "Web 在终端安装。Desktop 把解压目录的绝对路径粘进侧栏「插件 → 添加插件」。网页不会安装。" : `Web 用终端命令。Desktop 在侧栏「插件 → 添加插件」粘贴上面那一段，装完点「立即启用」。${zip ? "仓库 zip 只是源码。" : ""}${plugin.dsh ? "等级和风险来自 dsh.so，本站没有复验。" : ""}`}</p>
       </aside>
     </div>
   </section>`;
@@ -681,10 +697,10 @@ async function renderAbout(my) {
     <div class="cols" style="margin-top:14px">
       <article class="panel">
         <h2>安装</h2>
-        <p>Web 和 Desktop 各有一份配置，命令要各执行一次。这个网站不会安装。</p>
+        <p>Web 在终端装。Desktop 在应用侧栏「插件」里装，应用保持打开。这个网站不会安装，两边也不互通。</p>
         <div class="install"><span class="install-tag">Web</span><code>dsh plugin --profile web add github:owner/repo</code></div>
-        <div class="install"><span class="install-tag">Desktop</span><code>dsh plugin --profile desktop add github:owner/repo</code></div>
-        <p class="muted">npm 包把末尾换成包名。Desktop 先打开一次，再完全退出（关窗口只是隐藏），执行命令后重新打开。终端没有 dsh 时，用应用菜单「管理 dsh 命令…」安装。npm 安装的 dsh 和 npx 不能管理 desktop。仓库 zip 只是源码。</p>
+        <div class="install"><span class="install-tag">Desktop</span><code>侧栏「插件」→ 添加插件，粘贴 github:owner/repo</code></div>
+        <p class="muted">npm 包把地址换成包名。装完点「立即启用」。页面若提示要重启，再完全退出后重新打开；关窗口只是隐藏。设置里的插件列表不能安装。npm 的 dsh 和 npx 改不了 desktop。只有应用菜单「管理 dsh 命令…」装上的 dsh，才能在完全退出后执行 dsh plugin --profile desktop add。仓库 zip 只是源码。</p>
       </article>
       <article class="panel">
         <h2>本机账号</h2>
@@ -871,16 +887,16 @@ function installGuide(plugin) {
     ? [
         "先下载 zip 并解压。这个网页不会把它装进 DSH。",
         "Web：在解压目录的上一级执行 Web 命令，然后重新运行 dsh web。",
-        "Desktop：先打开一次应用，再完全退出。关窗口只是隐藏，任务还在跑。",
-        "执行 Desktop 命令后重新打开。两边用各自的 list 确认，插件不互通。",
+        "Desktop：应用保持打开。左侧「插件」点「添加插件」，把解压目录的绝对路径粘进去，再点「安装」。不要粘贴 ./目录名。",
+        "装完点「立即启用」。若提示需要重启，再完全退出后重新打开。关窗口只是隐藏。Web 和 Desktop 各有一份，不互通。",
       ]
     : [
-        "按要装的一端复制命令，到终端执行。网页不会安装。Web 和 Desktop 要各装一次。",
-        "Web：执行后重新运行 dsh web。用 dsh plugin --profile web list 确认。",
-        "Desktop：先打开一次，让它生成 desktop 配置。然后完全退出。关窗口只是隐藏。",
-        "再执行 Desktop 命令。重新打开后才生效。用 dsh plugin --profile desktop list 确认。",
+        "Web 和 Desktop 要各装一次。网页不会替你安装。",
+        "Web：复制上面的命令，到终端执行，然后重新运行 dsh web。",
+        "Desktop：应用保持打开。左侧「插件」点「添加插件」，把上面 Desktop 那一行粘进去，再点「安装」。不要去「设置」里装。",
+        "装完点「立即启用」。若提示需要重启，再完全退出后重新打开。不要用 npm 或 npx 的 dsh 执行 --profile desktop。",
       ];
-  const notes = ["终端没有 dsh 时，Web 可以在命令前加 npx @deepseek-ai/dsh。Desktop 不行：用应用菜单「管理 dsh 命令…」安装。npm 安装的 dsh 也不能改 desktop 配置。"];
+  const notes = ["Web 的终端里没有 dsh 时，可以在命令前加 npx @deepseek-ai/dsh。这条不能用来装 Desktop。Desktop 的命令行只认应用菜单「管理 dsh 命令…」装上的 dsh，而且要先完全退出，关窗口不算。"];
   if (github) notes.unshift("这是从 GitHub 安装源码。如果提示要允许构建，只在信任这个仓库时允许，然后把命令再执行一次。");
   if (!plugin.local && plugin.repo) notes.push("「仓库 zip」只是源码压缩包，不能代替上面的安装命令。");
   return `<ol class="how">${steps.map((step) => `<li>${esc(step)}</li>`).join("")}</ol>
