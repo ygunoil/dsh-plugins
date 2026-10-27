@@ -25,7 +25,7 @@ import {
 import { readPackageJson } from "./zip.js?v=20261027";
 
 const app = document.querySelector("#app");
-const state = { q: "", cat: "", src: 0, level: 0, sort: "stars", page: 1, open: "" };
+const state = { q: "", cat: "", src: 0, level: 0, sort: "stars", page: 1 };
 const pageSize = 24;
 let token = 0;
 let unsub = null;
@@ -123,7 +123,6 @@ function marketHash() {
   if (state.level) params.set("lv", String(state.level));
   if (state.sort && state.sort !== "stars") params.set("sort", state.sort);
   if (state.page > 1) params.set("page", String(state.page));
-  if (state.open) params.set("id", state.open);
   const query = params.toString();
   return query ? `#/market?${query}` : "#/market";
 }
@@ -135,7 +134,6 @@ function applyMarketParams(params) {
   state.level = Number(params.get("lv") || 0);
   state.sort = params.get("sort") || "stars";
   state.page = Math.max(1, Number(params.get("page") || 1) || 1);
-  state.open = params.get("id") || "";
 }
 
 function navKey(path) {
@@ -204,12 +202,16 @@ function hi(value) {
   return html;
 }
 
-function openHref(id) {
-  const previous = state.open;
-  state.open = id;
-  const href = marketHash();
-  state.open = previous;
-  return href;
+function pluginHref(id) {
+  const params = new URLSearchParams();
+  params.set("id", id);
+  if (state.q) params.set("q", state.q);
+  if (state.cat) params.set("cat", state.cat);
+  if (state.src) params.set("src", String(state.src));
+  if (state.level) params.set("lv", String(state.level));
+  if (state.sort && state.sort !== "stars") params.set("sort", state.sort);
+  if (state.page > 1) params.set("page", String(state.page));
+  return `#/plugin?${params}`;
 }
 
 function card(plugin) {
@@ -217,8 +219,7 @@ function card(plugin) {
   const cat = plugin.cat && plugin.cat !== "other" ? `<span class="pill">${hi(catLabel(plugin.cat))}</span>` : "";
   const health = plugin.health ? `<span class="pill pill-risk">${esc(HEALTH[plugin.health] || "异常")}</span>` : "";
   const sources = plugin.local ? `<span class="pill">本机</span>` : sourcePills(plugin.src);
-  const open = state.open === plugin.id ? " is-open" : "";
-  return `<a class="card${plugin.health === 1 ? " is-dead" : ""}${open}" href="${esc(openHref(plugin.id))}">
+  return `<a class="card${plugin.health === 1 ? " is-dead" : ""}" href="${esc(pluginHref(plugin.id))}">
     <header><h3>${hi(plugin.name)}</h3>${plugin.stars ? `<em class="stars">${esc(compact(plugin.stars))}</em>` : ""}</header>
     ${repo ? `<p class="repo">${hi(repo)}</p>` : ""}
     <p class="desc">${hi(plugin.desc || "暂无简介")}</p>
@@ -401,10 +402,12 @@ async function renderMarket(my) {
   await loadLocalRows();
   if (my !== token) return;
   app.innerHTML = `<section class="page">
-    <div class="page-head">
+    <div class="page-head market-head">
       <h1>插件目录</h1>
       <p class="muted" id="catalog-note">${catalogNote(manifest)}</p>
     </div>
+    <div class="market">
+    <aside class="market-side">
     <section class="cat-board" id="cats" aria-label="分类">
       <div class="cat-head"><span>分类</span><span id="cat-status"></span></div>
       <label class="cat-find">
@@ -413,8 +416,12 @@ async function renderMarket(my) {
       <div id="cat-body"></div>
       <p class="cat-empty" id="cat-empty" hidden>没有这个分类</p>
     </section>
+    </aside>
+    <div class="market-main">
     <div class="filter-strip" id="filters" aria-label="来源、等级和排序"></div>
     <div id="results"></div>
+    </div>
+    </div>
   </section>`;
   const catInput = document.getElementById("cat-q");
   catInput.value = catQuery;
@@ -439,9 +446,9 @@ async function renderMarket(my) {
   paintCats();
   paintFilters();
   paintResults();
-  renderDrawer();
   if (unsub) unsub();
   unsub = onProgress(() => paintResults());
+  scrollList();
   ensureAll().then(() => {
     if (my === token) paintResults();
   }).catch((error) => {
@@ -481,41 +488,49 @@ function pluginHtml(plugin) {
   const repoUrl = githubUrl(plugin.repo);
   const zip = repoUrl && ![1, 2, 3].includes(plugin.health) ? `${repoUrl}/archive/HEAD.zip` : "";
   const tgz = npmTgz(plugin.npm, plugin.ver);
+  const cat = plugin.cat && plugin.cat !== "other" ? catLabel(plugin.cat) : "未分类";
+  const warn = plugin.health ? `<p class="callout">${esc(HEALTH[plugin.health] || "源仓库异常")}</p>` : "";
   const links = [
+    zip ? `<a class="btn btn-ghost" href="${esc(zip)}">仓库 zip</a>` : "",
+    tgz ? `<a class="btn btn-ghost" href="${esc(tgz)}">npm 包</a>` : "",
+    plugin.local ? `<button class="btn" type="button" data-act="dl-upload" data-id="${esc(plugin.id)}">下载 zip</button>` : "",
     repoUrl ? `<a class="btn btn-ghost" href="${esc(repoUrl)}" target="_blank" rel="noopener noreferrer">GitHub</a>` : "",
     plugin.dsh ? `<a class="btn btn-ghost" href="${esc(safeUrl(plugin.dsh))}" target="_blank" rel="noopener noreferrer">dsh.so</a>` : "",
     plugin.page ? `<a class="btn btn-ghost" href="${esc(safeUrl(plugin.page))}" target="_blank" rel="noopener noreferrer">awesome</a>` : "",
     npmUrl(plugin.npm) ? `<a class="btn btn-ghost" href="${esc(npmUrl(plugin.npm))}" target="_blank" rel="noopener noreferrer">npm</a>` : "",
   ].join("");
-  const downloads = [
-    zip ? `<a class="btn btn-ghost" href="${esc(zip)}">仓库 zip</a>` : "",
-    tgz ? `<a class="btn btn-ghost" href="${esc(tgz)}">下载 npm 包</a>` : "",
-    plugin.local ? `<button class="btn" type="button" data-act="dl-upload" data-id="${esc(plugin.id)}">下载 zip</button>` : "",
-  ].join("");
-  const cat = plugin.cat && plugin.cat !== "other" ? catLabel(plugin.cat) : "未分类";
-  return `<section class="page detail">
-    <article class="panel">
-      <p class="crumb"><a href="${esc(marketHash())}">目录</a> / ${esc(cat)}</p>
-      <h1>${esc(plugin.name)}</h1>
-      <p class="lede">${esc(plugin.desc || "暂无简介")}</p>
-      <div class="split">${levelChip(plugin)}${riskChip(plugin)}${plugin.health ? `<span class="pill pill-risk">${esc(HEALTH[plugin.health])}</span>` : ""}${plugin.local ? `<span class="pill">本机</span>` : sourcePills(plugin.src)}</div>
-      ${plugin.install ? `<div class="install"><code>${esc(plugin.install)}</code><button class="btn" type="button" data-act="copy" data-copy="${esc(plugin.install)}">复制</button></div>` : `<p class="muted">这条没有安装命令。</p>`}
-      <div class="actions">${downloads}${links}</div>
-      <p class="muted">${plugin.dsh ? "L 级和风险来自 dsh.so，本站没有复验。" : "没有 dsh.so 标注。缺标注不等于未通过。"}安装命令来自目录记录，本站不会执行。</p>
-    </article>
-    <aside class="side">
-      <h2>信息</h2>
-      <div class="facts">
-        <div><span>仓库</span><b>${repoUrl ? `<a href="${esc(repoUrl)}" target="_blank" rel="noopener noreferrer">${esc(plugin.repo)}</a>` : esc(plugin.repo || "—")}</b></div>
-        <div><span>包名</span><b>${esc(plugin.npm || "—")}</b></div>
-        <div><span>版本</span><b>${esc(plugin.ver || "—")}</b></div>
-        <div><span>Star</span><b>${plugin.stars ? esc(compact(plugin.stars)) : "—"}</b></div>
-        <div><span>下载量</span><b>${plugin.downloads ? esc(compact(plugin.downloads)) : "—"}</b></div>
-        <div><span>语言</span><b>${esc(plugin.lang || "—")}</b></div>
-        <div><span>风险</span><b>${esc(RISK[plugin.risk] || "—")}</b></div>
-        <div><span>分类</span><b>${esc(cat)}</b></div>
-      </div>
-    </aside>
+  const install = plugin.install
+    ? `<div class="install"><code>${esc(plugin.install)}</code><button class="btn" type="button" data-act="copy" data-copy="${esc(plugin.install)}">复制</button></div>`
+    : `<p class="muted">这条没有安装命令。</p>`;
+  const repoLine = repoUrl
+    ? `<a href="${esc(repoUrl)}" target="_blank" rel="noopener noreferrer">${esc(plugin.repo)}</a>`
+    : esc(plugin.npm || "没有公开仓库");
+  return `<section class="page detail-page">
+    <p class="crumb"><a href="${esc(marketHash())}">返回目录</a> / ${esc(cat)}</p>
+    <div class="detail-grid">
+      <article class="panel">
+        <h1>${esc(plugin.name)}</h1>
+        <p class="lede">${esc(plugin.desc || "暂无简介")}</p>
+        <p class="meta-line">${repoLine}</p>
+        <h2 class="install-title">在终端装进 DSH</h2>
+        ${install}
+        ${installGuide(plugin)}
+        <h2 class="install-title">仓库说明</h2>
+        <div id="repo-live" class="repo-live" data-repo="${esc(repoUrl)}"><p class="muted">${repoUrl ? "正在读取仓库说明…" : "这条没有 GitHub 仓库。"}</p></div>
+      </article>
+      <aside class="side">
+        ${warn}
+        <div class="stats">
+          <div class="stat"><b id="live-star">${plugin.stars ? esc(compact(plugin.stars)) : "—"}</b><span>Star</span></div>
+          <div class="stat"><b>${plugin.downloads ? esc(compact(plugin.downloads)) : "—"}</b><span>下载</span></div>
+          <div class="stat"><b>${esc(shownVersion(plugin) || "—")}</b><span>版本</span></div>
+          <div class="stat"><b>${esc(plugin.lang || "—")}</b><span>语言</span></div>
+        </div>
+        <div class="split">${levelChip(plugin)}${riskChip(plugin)}${plugin.health ? `<span class="pill pill-risk">${esc(HEALTH[plugin.health])}</span>` : ""}${plugin.local ? `<span class="pill">本机</span>` : sourcePills(plugin.src)}</div>
+        <div class="actions">${links}</div>
+        <p class="drawer-note muted">${plugin.local ? "下载 zip 后，到终端执行上面的命令。网页不会安装。" : `安装只在终端里完成。${zip ? "仓库 zip 只是源码。" : ""}${plugin.dsh ? "等级和风险来自 dsh.so，本站没有复验。" : ""}`}</p>
+      </aside>
+    </div>
   </section>`;
 }
 
@@ -542,6 +557,8 @@ async function renderPlugin(my, id) {
   }
   document.title = `${plugin.name} · DSH Plugins`;
   app.innerHTML = pluginHtml(plugin);
+  scrollList();
+  loadRemote(plugin);
 }
 
 function sourceRows(manifest) {
@@ -675,24 +692,10 @@ function renderNotFound() {
   app.innerHTML = `<section class="page panel"><h1>没有这一页</h1><p><a href="#/market">返回目录</a></p></section>`;
 }
 
-function listHash() {
-  const open = state.open;
-  state.open = "";
-  const href = marketHash();
-  state.open = open;
-  return href;
-}
-
 function stateListKey() {
-  const hash = listHash();
+  const hash = marketHash();
   const cut = hash.indexOf("?");
   return catalogListKey(new URLSearchParams(cut === -1 ? "" : hash.slice(cut + 1)));
-}
-
-function cardId(href) {
-  const cut = String(href || "").indexOf("?");
-  if (cut < 0) return "";
-  return new URLSearchParams(href.slice(cut + 1)).get("id") || "";
 }
 
 function scrollList() {
@@ -708,38 +711,29 @@ function paintCatalogShell(params) {
   paintCats();
   paintFilters();
   paintResults();
-  const plugin = state.open ? (getById(state.open) || localRows.find((item) => item.id === state.open)) : null;
-  document.title = plugin ? `${plugin.name} · DSH Plugins` : "目录 · DSH Plugins";
-  renderDrawer();
+  document.title = "目录 · DSH Plugins";
 }
 
 async function draw() {
   const route = readRoute();
-  let path = route.path;
-  let params = route.params;
-  if (path.startsWith("/plugin")) {
-    const id = params.get("id") || "";
+  const path = route.path;
+  const params = route.params;
+  const top = document.querySelector(".top");
+  if (top) document.documentElement.style.setProperty("--top-h", `${Math.ceil(top.getBoundingClientRect().height)}px`);
+  if (isCatalog(path) && params.get("id")) {
+    const id = params.get("id");
     const next = new URLSearchParams(params);
     next.delete("id");
-    if (id) next.set("id", id);
-    path = "/market";
-    params = next;
     const query = next.toString();
-    const hash = query ? `#/market?${query}` : "#/market";
-    if (location.hash !== hash) history.replaceState(null, "", hash);
+    location.replace(`#/plugin?id=${encodeURIComponent(id)}${query ? `&${query}` : ""}`);
+    return;
   }
   if (isCatalog(path) && document.getElementById("results")) {
     if (catalogListKey(params) === renderedListKey) {
-      state.open = params.get("id") || "";
       syncSearch();
       markNav(path);
       renderSession();
-      document.querySelectorAll(".card").forEach((card) => {
-        card.classList.toggle("is-open", cardId(card.getAttribute("href")) === state.open);
-      });
-      const plugin = state.open ? (getById(state.open) || localRows.find((item) => item.id === state.open)) : null;
-      document.title = plugin ? `${plugin.name} · DSH Plugins` : "目录 · DSH Plugins";
-      renderDrawer();
+      document.title = "目录 · DSH Plugins";
       return;
     }
     paintCatalogShell(params);
@@ -751,7 +745,7 @@ async function draw() {
     unsub();
     unsub = null;
   }
-  if (isCatalog(path)) applyMarketParams(params);
+  if (isCatalog(path) || path.startsWith("/plugin")) applyMarketParams(params);
   syncSearch();
   markNav(path);
   renderSession();
@@ -803,103 +797,6 @@ function installGuide(plugin) {
     <p class="drawer-note muted">${notes.map(esc).join("<br>")}</p>`;
 }
 
-function drawerHtml(plugin) {
-  const repoUrl = githubUrl(plugin.repo);
-  const zip = repoUrl && plugin.health !== 1 ? `${repoUrl}/archive/HEAD.zip` : "";
-  const tgz = npmTgz(plugin.npm, plugin.ver);
-  const cat = plugin.cat && plugin.cat !== "other" ? catLabel(plugin.cat) : "未分类";
-  const warn = plugin.health ? `<p class="callout">${esc(HEALTH[plugin.health] || "源仓库异常")}</p>` : "";
-  const links = [
-    zip ? `<a class="btn btn-ghost" href="${esc(zip)}">仓库 zip</a>` : "",
-    tgz ? `<a class="btn btn-ghost" href="${esc(tgz)}">npm 包</a>` : "",
-    plugin.local ? `<button class="btn" type="button" data-act="dl-upload" data-id="${esc(plugin.id)}">下载 zip</button>` : "",
-    repoUrl ? `<a class="btn btn-ghost" href="${esc(repoUrl)}" target="_blank" rel="noopener noreferrer">GitHub</a>` : "",
-    plugin.dsh ? `<a class="btn btn-ghost" href="${esc(safeUrl(plugin.dsh))}" target="_blank" rel="noopener noreferrer">dsh.so</a>` : "",
-    plugin.page ? `<a class="btn btn-ghost" href="${esc(safeUrl(plugin.page))}" target="_blank" rel="noopener noreferrer">awesome</a>` : "",
-    npmUrl(plugin.npm) ? `<a class="btn btn-ghost" href="${esc(npmUrl(plugin.npm))}" target="_blank" rel="noopener noreferrer">npm</a>` : "",
-  ].join("");
-  const install = plugin.install
-    ? `<div class="install"><code>${esc(plugin.install)}</code><button class="btn" type="button" data-act="copy" data-copy="${esc(plugin.install)}">复制</button></div>`
-    : `<p class="muted">这条没有安装命令。</p>`;
-  const repoLine = repoUrl
-    ? `<a href="${esc(repoUrl)}" target="_blank" rel="noopener noreferrer">${esc(plugin.repo)}</a>`
-    : esc(plugin.npm || "没有公开仓库");
-  return `<div class="drawer-stick">
-      <div class="drawer-bar"><p class="crumb">${esc(cat)}</p><button type="button" class="btn btn-ghost" data-act="close">关闭</button></div>
-      <h1>${esc(plugin.name)}</h1>
-      ${install}
-    </div>
-    ${installGuide(plugin)}
-    <p class="lede">${esc(plugin.desc || "暂无简介")}</p>
-    <p class="meta-line">${repoLine}</p>
-    ${warn}
-    <div class="stats">
-      <div class="stat"><b id="live-star">${plugin.stars ? esc(compact(plugin.stars)) : "—"}</b><span>Star</span></div>
-      <div class="stat"><b>${plugin.downloads ? esc(compact(plugin.downloads)) : "—"}</b><span>下载</span></div>
-      <div class="stat"><b>${esc(shownVersion(plugin) || "—")}</b><span>版本</span></div>
-      <div class="stat"><b>${esc(plugin.lang || "—")}</b><span>语言</span></div>
-    </div>
-    <div class="split">${levelChip(plugin)}${riskChip(plugin)}${plugin.health ? `<span class="pill pill-risk">${esc(HEALTH[plugin.health])}</span>` : ""}${plugin.local ? `<span class="pill">本机</span>` : sourcePills(plugin.src)}</div>
-    <div class="actions">${links}</div>
-    ${plugin.dsh ? `<p class="drawer-note muted">等级和风险来自 dsh.so，本站没有复验。</p>` : ""}
-    <div id="repo-live" class="repo-live" data-repo="${esc(repoUrl)}"><p class="muted">${repoUrl ? "正在读取仓库说明…" : "这条没有 GitHub 仓库。"}</p></div>`;
-}
-
-function closeDrawer() {
-  state.open = "";
-  const next = marketHash();
-  if (location.hash !== next) location.hash = next;
-  else renderDrawer();
-}
-
-async function renderDrawer() {
-  const id = state.open;
-  document.body.classList.toggle("with-drawer", Boolean(id));
-  let drawer = document.getElementById("drawer");
-  let backdrop = document.getElementById("drawer-backdrop");
-  if (!id) {
-    drawer?.remove();
-    backdrop?.remove();
-    return;
-  }
-  const top = document.querySelector(".top");
-  if (top) document.documentElement.style.setProperty("--top-h", `${Math.ceil(top.getBoundingClientRect().height)}px`);
-  if (!backdrop) {
-    backdrop = document.createElement("button");
-    backdrop.id = "drawer-backdrop";
-    backdrop.className = "drawer-backdrop";
-    backdrop.type = "button";
-    backdrop.dataset.act = "close";
-    backdrop.setAttribute("aria-label", "关闭详情");
-    document.body.appendChild(backdrop);
-  }
-  if (!drawer) {
-    drawer = document.createElement("aside");
-    drawer.id = "drawer";
-    drawer.className = "drawer";
-    drawer.setAttribute("aria-label", "插件详情");
-    document.body.appendChild(drawer);
-  }
-  if (drawer.dataset.id === id && drawer.dataset.ready === "1") return;
-  drawer.dataset.id = id;
-  drawer.dataset.ready = "0";
-  let plugin = getById(id) || localRows.find((item) => item.id === id);
-  if (!plugin) {
-    drawer.innerHTML = `<p class="muted">正在打开…</p>`;
-    try { await ensureAll(); } catch { /* paint error elsewhere */ }
-    if (state.open !== id) return;
-    plugin = getById(id);
-  }
-  if (!plugin) {
-    drawer.innerHTML = `<p>没有这个插件。</p><button class="btn" type="button" data-act="close">返回</button>`;
-    return;
-  }
-  drawer.innerHTML = drawerHtml(plugin);
-  drawer.dataset.ready = "1";
-  document.title = `${plugin.name} · DSH Plugins`;
-  drawer.scrollTop = 0;
-  loadRemote(plugin);
-}
 
 function readmeHref(url, repoUrl) {
   const raw = String(url || "").trim();
@@ -1023,7 +920,7 @@ function paintRemote(slot, data) {
     : `<p class="muted">${when}。仓库没有可读取的 README。</p>`;
   slot.innerHTML = body;
   const readme = slot.querySelector(".readme");
-  if (readme && readme.scrollHeight > 560) {
+  if (readme && readme.scrollHeight > 760) {
     readme.classList.add("is-clipped");
     slot.insertAdjacentHTML("beforeend", `<button type="button" class="btn btn-ghost readme-toggle" data-act="readme-more">展开全文</button>`);
   }
@@ -1054,7 +951,7 @@ async function loadRemote(plugin) {
         headers: { accept: "application/vnd.github.raw" },
       }),
     ]);
-    if (mine !== remoteToken || state.open !== plugin.id || !slot.isConnected) return;
+    if (mine !== remoteToken || !slot.isConnected) return;
     if (repoResponse.status === 403 || repoResponse.status === 429) {
       slot.innerHTML = `<p class="muted">GitHub 暂时限制读取。可以打开仓库查看最新说明。</p>`;
       return;
@@ -1104,10 +1001,15 @@ async function syncNow() {
     fillCategories();
     const note = document.getElementById("catalog-note");
     if (note && manifest) note.textContent = catalogNote(manifest);
-    paintResults();
-    const drawer = document.getElementById("drawer");
-    if (drawer) drawer.dataset.ready = "0";
-    renderDrawer();
+    const route = readRoute();
+    if (route.path.startsWith("/plugin")) {
+      const current = getById(route.params.get("id") || "");
+      if (current && document.querySelector(".detail-page")) {
+        document.title = `${current.name} · DSH Plugins`;
+        app.innerHTML = pluginHtml(current);
+        loadRemote(current);
+      }
+    } else paintResults();
     setFresh(`已同步 ${num(items.length)} 条，更新于 ${day(builtAt)}。`, syncButton("再次同步"));
   } catch (error) {
     if (error?.name === "AbortError") setFresh("同步已取消。", syncButton());
@@ -1204,10 +1106,6 @@ document.body.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-act]");
   if (!button || button.disabled) return;
   const act = button.dataset.act;
-  if (act === "close") {
-    event.preventDefault();
-    closeDrawer();
-  }
   if (act === "readme-more") {
     event.preventDefault();
     document.querySelector(".readme")?.classList.remove("is-clipped");
@@ -1395,9 +1293,10 @@ document.body.addEventListener("drop", async (event) => {
 
 window.addEventListener("hashchange", () => { draw(); });
 window.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && state.open) {
+  if (event.key === "Escape" && readRoute().path.startsWith("/plugin")) {
+    if (/input|textarea|select/i.test(event.target.tagName)) return;
     event.preventDefault();
-    closeDrawer();
+    location.hash = marketHash();
     return;
   }
   if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey) return;
