@@ -512,14 +512,6 @@ async function renderMarket(my) {
       </div>
       <p class="stage-news" id="catalog-note">${catalogNote(manifest)}</p>
       <h1>找到合适的插件</h1>
-      <form class="composer" id="seek-form">
-        <input id="seek-q" type="search" placeholder="搜索插件，例如：浏览器、Git、金融、桌面" autocomplete="off" aria-label="搜索插件" enterkeyhint="search">
-        <div class="composer-bar">
-          <button class="composer-go" type="submit" aria-label="搜索">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6M6.5 11.5 12 6l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </button>
-        </div>
-      </form>
       <section class="popular" id="popular" aria-label="热门搜索">
         <div class="popular-grid" id="hot-tags"></div>
       </section>
@@ -533,6 +525,12 @@ async function renderMarket(my) {
     </div>
     <div class="market">
     <aside class="market-side">
+    <form class="composer" id="seek-form">
+      <input id="seek-q" type="search" placeholder="搜索插件" autocomplete="off" aria-label="搜索插件" enterkeyhint="search">
+      <button class="composer-go" type="submit" aria-label="搜索">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6M6.5 11.5 12 6l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </form>
     <section class="cat-board" id="cats" aria-label="分类">
       <div class="cat-head"><span>分类</span><span id="cat-status"></span></div>
       <label class="cat-find">

@@ -929,14 +929,22 @@ body.is-market .stage h1 {
   letter-spacing: 0.22em;
   text-indent: 0.22em;
 }
-body.is-market .composer {
-  width: min(680px, 100%);
-  min-height: 64px;
-  margin: 0 auto 8px;
-  padding: 10px 10px 8px 16px;
-  border-radius: 20px;
+body.is-market .market-side .composer {
+  width: 100%;
+  min-height: 0;
+  flex-direction: row;
+  align-items: center;
+  margin: 0 0 10px;
+  padding: 4px 4px 4px 12px;
+  border-radius: 16px;
 }
-body.is-market .composer input { padding: 0 8px 0 0; font-size: 15px; }
+body.is-market .market-side .composer input {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 8px 6px 8px 0;
+  font-size: 14px;
+}
+body.is-market .market-side .composer-go { flex: none; width: 32px; height: 32px; }
 body.is-market .popular { max-width: min(860px, 100%); }
 body.is-market .popular-grid {
   max-height: 32px;
@@ -1037,8 +1045,9 @@ body.is-market .foot {
 body.is-market .foot p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 body.is-market .refs { display: none; }
 @media (max-width: 900px) {
-  body.is-market .market { grid-template-columns: 1fr; grid-template-rows: 92px minmax(0, 1fr); }
-  body.is-market .market-side { max-height: 92px; }
+  body.is-market .market { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
+  body.is-market .market-side { max-height: none; overflow: hidden; }
+  body.is-market .market-side .cat-board { max-height: 92px; overflow: auto; }
 }
 @media (max-width: 720px) {
   body.is-market .fresh { padding-inline: 16px; }
