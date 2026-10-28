@@ -757,6 +757,10 @@ mark { background: rgba(77, 107, 254, 0.16); color: inherit; border-radius: 4px;
   line-height: 1.45;
 }
 .stars { color: var(--blue-2); font-style: normal; white-space: nowrap; font-size: 13px; }
+.card-metrics { display: flex; gap: 10px; flex: none; align-items: baseline; margin-left: 8px; }
+.card-metric { white-space: nowrap; }
+.card-metric b { color: var(--blue-2); font-size: 13px; font-weight: 600; }
+.card-metric small { margin-left: 3px; color: var(--muted); font-size: 11px; font-weight: 500; }
 .pill {
   border-radius: 999px;
   padding: 2px 8px;

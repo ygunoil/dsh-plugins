@@ -136,7 +136,8 @@ function marketHash() {
 function applyMarketParams(params) {
   state.q = params.get("q") || "";
   state.cat = params.get("cat") || "";
-  state.src = Number(params.get("src") || 0);
+  const src = Number(params.get("src") || 0);
+  state.src = src === 32 ? 32 : 0;
   state.level = Number(params.get("lv") || 0);
   state.sort = ["level", "downloads", "name"].includes(params.get("sort")) ? params.get("sort") : "stars";
   state.order = params.get("ord") === "asc" ? "asc" : "desc";
@@ -257,20 +258,25 @@ function installRows(install) {
   }).join("")}</div>`;
 }
 
+function cardMetric(value, label) {
+  const text = value == null || value === "" ? "—" : compact(value);
+  return `<span class="card-metric"><b>${esc(text)}</b><small>${label}</small></span>`;
+}
+
 function card(plugin) {
   const repo = plugin.repo || plugin.npm || "";
   const cat = plugin.cat && plugin.cat !== "other" ? `<span class="pill">${hi(catLabel(plugin.cat))}</span>` : "";
   const health = plugin.health ? `<span class="pill pill-risk">${esc(HEALTH[plugin.health] || "异常")}</span>` : "";
-  const sources = plugin.local ? `<span class="pill">本机</span>` : sourcePills(plugin.src);
+  const local = plugin.local ? `<span class="pill">本机</span>` : "";
   const command = plugin.install
     ? `<div class="card-add"><code title="${esc(plugin.install)}">${esc(addTarget(plugin.install))}</code><span class="add-btns"><button class="btn" type="button" data-act="copy" data-copy="${esc(withProfile(plugin.install, "web"))}" title="复制 Web 命令">Web</button>${desktopSpec(plugin.install) ? `<button class="btn btn-ghost" type="button" data-act="copy" data-copy="${esc(desktopSpec(plugin.install))}" title="粘贴到 Desktop 侧栏「插件 → 添加插件」，装完点「立即启用」">Desktop</button>` : ""}</span></div>`
     : "";
   return `<article class="card${plugin.health === 1 ? " is-dead" : ""}">
     <a class="card-main" href="${esc(pluginHref(plugin.id))}">
-      <header><h3>${hi(plugin.name)}</h3>${plugin.stars ? `<em class="stars">${esc(compact(plugin.stars))}</em>` : ""}</header>
+      <header><h3>${hi(plugin.name)}</h3><span class="card-metrics">${cardMetric(plugin.stars, "Star")}${cardMetric(plugin.downloads, "下载")}</span></header>
       ${repo ? `<p class="repo">${hi(repo)}</p>` : ""}
       <p class="desc">${hi(plugin.desc || "暂无简介")}</p>
-      <footer>${cat}${levelChip(plugin)}${riskChip(plugin)}${health}${sources}<span class="view">查看</span></footer>
+      <footer>${cat}${levelChip(plugin)}${riskChip(plugin)}${health}${local}<span class="view">查看</span></footer>
     </a>
     ${command}
   </article>`;
@@ -421,7 +427,7 @@ function segButton(act, value, label, on, title = "") {
 function paintFilters() {
   const root = document.getElementById("filters");
   if (!root) return;
-  const sources = [[0, "全部"], [1, "topic"], [2, "market"], [4, "awesome"], [8, "工坊"], [16, "dsh.so"], [32, "本机"]];
+  const sources = [[0, "全部"], [32, "本机"]];
   const levels = [[0, "全部"], [5, "L5"], [4, "L4"], [3, "L3"], [2, "L2"], [1, "L1"]];
   const sorts = [["stars", "Star"], ["level", "等级"], ["downloads", "下载"], ["name", "名称"]];
   const orders = [["desc", "降序", "从高到低，名称从 Z 到 A"], ["asc", "升序", "从低到高，名称从 A 到 Z"]];
