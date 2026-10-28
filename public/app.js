@@ -32,6 +32,8 @@ let unsub = null;
 let flash = "";
 let localRows = [];
 let renderedListKey = "";
+let fittedSize = pageSize;
+let resizeTimer = 0;
 let syncing = false;
 let queryTimer = 0;
 let composing = false;
@@ -286,8 +288,27 @@ function pager(page, pages) {
   </nav>`;
 }
 
+function fitPageSize() {
+  if (!document.body.classList.contains("is-market")) return pageSize;
+  const results = document.getElementById("results");
+  if (!results || results.clientWidth < 240 || results.clientHeight < 140) return fittedSize;
+  const gap = 12;
+  const cardH = 150;
+  const gridH = results.clientHeight - 64;
+  const rows = Math.max(1, Math.floor((gridH + gap) / (cardH + gap)));
+  const cols = Math.max(1, Math.floor((results.clientWidth + gap) / (280 + gap)));
+  return Math.min(pageSize, rows * cols);
+}
+
+function activePageSize() {
+  if (!document.body.classList.contains("is-market")) return pageSize;
+  fittedSize = fitPageSize();
+  return fittedSize;
+}
+
 function currentPage(filtered) {
-  const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const size = activePageSize();
+  const pages = Math.max(1, Math.ceil(filtered.length / size));
   const ready = isLoaded() || state.src === 32;
   let page = state.page;
   if (ready && page > pages) {
@@ -297,8 +318,8 @@ function currentPage(filtered) {
     if (location.hash !== next) history.replaceState(null, "", next);
   }
   const shown = Math.min(page, pages);
-  const start = (shown - 1) * pageSize;
-  return { page: shown, pages, slice: filtered.slice(start, start + pageSize) };
+  const start = (shown - 1) * size;
+  return { page: shown, pages, slice: filtered.slice(start, start + size) };
 }
 
 function categoryGroups() {
@@ -1405,6 +1426,15 @@ document.body.addEventListener("drop", async (event) => {
 });
 
 window.addEventListener("hashchange", () => { draw(); });
+window.addEventListener("resize", () => {
+  if (!document.body.classList.contains("is-market") || !document.getElementById("results")) return;
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => {
+    const next = fitPageSize();
+    if (next === fittedSize) return;
+    paintResults();
+  }, 140);
+});
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && readRoute().path.startsWith("/plugin")) {
     if (/input|textarea|select/i.test(event.target.tagName)) return;

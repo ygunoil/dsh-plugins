@@ -870,7 +870,18 @@ body.is-market {
 }
 html:has(body.is-market) { height: 100%; overflow: hidden; }
 body.is-market .top { z-index: 30; padding-block: 8px; }
-body.is-market .fresh { position: relative; z-index: 1; padding: 2px 28px 0; }
+body.is-market .fresh {
+  position: absolute;
+  top: calc(var(--top-h, 52px) + 2px);
+  left: 0;
+  right: 0;
+  z-index: 4;
+  height: auto;
+  padding: 0 28px;
+  pointer-events: none;
+}
+body.is-market .fresh .btn,
+body.is-market .fresh button { pointer-events: auto; }
 body.is-market #app {
   position: relative;
   z-index: 1;
@@ -884,7 +895,7 @@ body.is-market .page {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 0 0 8px;
+  padding: 0;
   overflow: hidden;
 }
 body.is-market .stage {
@@ -893,13 +904,13 @@ body.is-market .stage {
   align-content: start;
   min-height: max-content;
   margin: 0 -28px;
-  padding: 4px 28px 6px;
+  padding: 18px 28px 2px;
   overflow: visible;
 }
 body.is-market .stage-scene { position: fixed; inset: 0; z-index: 0; }
 body.is-market .stage-glow { top: -12%; height: 340px; }
 body.is-market .stage-news {
-  display: block;
+  display: none;
   width: min(760px, 100%);
   max-width: 100%;
   margin: 0;
@@ -920,10 +931,10 @@ body.is-market .stage h1 {
 }
 body.is-market .composer {
   width: min(680px, 100%);
-  min-height: 76px;
+  min-height: 64px;
   margin: 0 auto 8px;
-  padding: 12px 12px 8px 18px;
-  border-radius: 22px;
+  padding: 10px 10px 8px 16px;
+  border-radius: 20px;
 }
 body.is-market .composer input { padding: 0 8px 0 0; font-size: 15px; }
 body.is-market .popular { max-width: min(860px, 100%); }
@@ -935,7 +946,7 @@ body.is-market .stage .pop { padding: 4px 10px; }
 body.is-market .add-banner {
   flex: 0 0 auto;
   align-items: center;
-  margin: 0 0 8px;
+  margin: 0 0 4px;
   padding: 7px 12px;
   border-radius: 12px;
 }
@@ -983,15 +994,45 @@ body.is-market .filter-strip { flex: none; margin-bottom: 8px; padding: 6px 10px
 body.is-market #results {
   flex: 1 1 auto;
   min-height: 0;
-  overflow: auto;
-  scrollbar-width: thin;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
-body.is-market .pager { margin: 10px 0 2px; }
+body.is-market #results .result-bar { flex: none; margin-bottom: 8px; }
+body.is-market #results .grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  align-content: start;
+  grid-auto-rows: 150px;
+  overflow: hidden;
+}
+body.is-market .card {
+  height: 150px;
+  min-height: 0;
+}
+body.is-market .card-main { min-height: 0; overflow: hidden; padding: 8px 12px 0; }
+body.is-market .card h3 { font-size: 15px; }
+body.is-market .card .repo { margin: 0; font-size: 11px; line-height: 1.2; }
+body.is-market .card .desc {
+  -webkit-line-clamp: 1;
+  flex: none;
+  margin: 2px 0 4px;
+  line-height: 1.35;
+}
+body.is-market .card footer { flex-wrap: nowrap; overflow: hidden; }
+body.is-market .card-add { position: relative; z-index: 1; margin: 0 8px 6px; padding: 2px 4px 2px 8px; background: #fff; }
+body.is-market .card-add code {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+}
+body.is-market .pager { flex: none; margin: 8px 0 0; }
 body.is-market .foot {
   position: relative;
   z-index: 1;
   flex: none;
-  padding: 0 0 8px;
+  padding: 2px 0 4px;
 }
 body.is-market .foot p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 body.is-market .refs { display: none; }
