@@ -292,11 +292,11 @@ function fitPageSize() {
   if (!document.body.classList.contains("is-market")) return pageSize;
   const results = document.getElementById("results");
   if (!results || results.clientWidth < 240 || results.clientHeight < 140) return fittedSize;
-  const gap = 12;
-  const cardH = 150;
-  const gridH = results.clientHeight - 64;
+  const gap = 16;
+  const cardH = 228;
+  const gridH = results.clientHeight - 76;
   const rows = Math.max(1, Math.floor((gridH + gap) / (cardH + gap)));
-  const cols = Math.max(1, Math.floor((results.clientWidth + gap) / (280 + gap)));
+  const cols = Math.max(1, Math.floor((results.clientWidth + gap) / (360 + gap)));
   return Math.min(pageSize, rows * cols);
 }
 
