@@ -110,25 +110,34 @@ export function ensureAll() {
   const rev = revision;
   loading = (async () => {
     const data = await boot();
-    const next = [];
-    for (let i = 0; i < data.shards.length; i += 4) {
-      if (rev !== revision) return items;
-      const group = data.shards.slice(i, i + 4);
-      const parts = await Promise.all(group.map(async (shard) => {
-        const response = await fetch(`./${shard}`, { cache: "no-cache" });
-        if (!response.ok) throw new Error("分片加载失败");
-        return response.json();
-      }));
-      if (rev !== revision) return items;
-      for (const rows of parts) {
-        for (const row of rows) next.push(hydrate(row));
-      }
-      items = next.slice();
+    if (rev !== revision) return items;
+    const shards = data.shards || [];
+    if (!shards.length) {
+      items = [];
+      loaded = true;
+      return items;
+    }
+    const version = encodeURIComponent(data.builtAt || "0");
+    const loadShard = async (shard) => {
+      const response = await fetch(`./${shard}?v=${version}`, { cache: "force-cache" });
+      if (!response.ok) throw new Error("分片加载失败");
+      return response.json();
+    };
+    const publish = (rows) => {
+      if (rev !== revision) return;
+      items = rows.map(hydrate);
       byId.clear();
+      for (const plugin of items) byId.set(plugin.id, plugin);
       for (const fn of listeners) fn(items.length, data.total);
+    };
+    const first = await loadShard(shards[0]);
+    publish(first);
+    if (shards.length > 1) {
+      const rest = await Promise.all(shards.slice(1).map(loadShard));
+      if (rev !== revision) return items;
+      publish(first.concat(...rest));
     }
     if (rev !== revision) return items;
-    for (const plugin of items) byId.set(plugin.id, plugin);
     loaded = true;
     return items;
   })().catch((error) => {

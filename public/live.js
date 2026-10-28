@@ -30,19 +30,24 @@ export async function pullLive(onStatus) {
   const { mergeRecords } = await import("./engine/merge.js?v=20261028d");
   const { fromDsh, fromAwesome, fromMarket, fromWorkshop } = await import("./engine/sources.js?v=20261028d");
   const make = { dshso: fromDsh, awesome: fromAwesome, market: fromMarket, workshop: fromWorkshop };
-  const records = [];
-  const stamps = {};
-  for (const [key, url, label] of SOURCES) {
-    onStatus?.(`正在连接 ${label}…`);
+  onStatus?.("正在同时读取四个源站…");
+  const loaded = await Promise.all(SOURCES.map(async ([key, url, label]) => {
     const response = await fetch(url, { cache: "no-store", signal });
     if (!response.ok) throw new Error(`${label} ${response.status}`);
-    stamps[key] = {
-      etag: response.headers.get("etag"),
-      bytes: Number(response.headers.get("content-length") || 0) || null,
-      modified: response.headers.get("last-modified"),
+    return {
+      key,
+      stamp: {
+        etag: response.headers.get("etag"),
+        bytes: Number(response.headers.get("content-length") || 0) || null,
+        modified: response.headers.get("last-modified"),
+      },
+      data: await response.json(),
     };
-    onStatus?.(`正在读取 ${label}…`);
-    const data = await response.json();
+  }));
+  const records = [];
+  const stamps = {};
+  for (const { key, stamp, data } of loaded) {
+    stamps[key] = stamp;
     for (const plugin of data.plugins || []) {
       const record = make[key](plugin);
       if (record) records.push(record);
