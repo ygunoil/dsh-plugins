@@ -43,7 +43,8 @@ button, input, select { font: inherit; color: inherit; }
 .brand small { display: none; }
 .brand small, .muted, .foot, .card .desc, .lede, .repo { color: var(--muted); }
 .mark { display: block; width: 32px; height: 32px; flex: none; }
-.nav { display: flex; gap: 4px; margin-left: auto; position: relative; z-index: 1; }
+.nav { display: none; gap: 4px; margin-left: auto; position: relative; z-index: 1; }
+#session { display: none; }
 .top-title {
   display: none;
   margin: 0;
