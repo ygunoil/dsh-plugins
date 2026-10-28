@@ -21,7 +21,7 @@ import {
   onProgress,
   replaceItems,
   catalogListKey,
-} from "./catalog.js?v=20261029w";
+} from "./catalog.js?v=20261029y";
 import { readPackageJson } from "./zip.js?v=20261027";
 
 const app = document.querySelector("#app");
@@ -136,8 +136,7 @@ function marketHash() {
 function applyMarketParams(params) {
   state.q = params.get("q") || "";
   state.cat = params.get("cat") || "";
-  const src = Number(params.get("src") || 0);
-  state.src = src === 32 ? 32 : 0;
+  state.src = 0;
   state.level = Number(params.get("lv") || 0);
   state.sort = ["level", "downloads", "name"].includes(params.get("sort")) ? params.get("sort") : "stars";
   state.order = params.get("ord") === "asc" ? "asc" : "desc";
@@ -263,6 +262,11 @@ function cardMetric(value, label) {
   return `<span class="card-metric"><b>${esc(text)}</b><small>${label}</small></span>`;
 }
 
+function pluginIcon(plugin, large = false) {
+  if (!plugin.icon) return "";
+  return `<img class="card-icon${large ? " is-lg" : ""}" src="${esc(plugin.icon)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">`;
+}
+
 function card(plugin) {
   const repo = plugin.repo || plugin.npm || "";
   const cat = plugin.cat && plugin.cat !== "other" ? `<span class="pill">${hi(catLabel(plugin.cat))}</span>` : "";
@@ -273,7 +277,7 @@ function card(plugin) {
     : "";
   return `<article class="card${plugin.health === 1 ? " is-dead" : ""}">
     <a class="card-main" href="${esc(pluginHref(plugin.id))}">
-      <header><h3>${hi(plugin.name)}</h3><span class="card-metrics">${cardMetric(plugin.stars, "Star")}${cardMetric(plugin.downloads, "下载")}</span></header>
+      <header>${pluginIcon(plugin)}<h3>${hi(plugin.name)}</h3><span class="card-metrics">${cardMetric(plugin.stars, "Star")}${cardMetric(plugin.downloads, "下载")}</span></header>
       ${repo ? `<p class="repo">${hi(repo)}</p>` : ""}
       <p class="desc">${hi(plugin.desc || "暂无简介")}</p>
       <footer>${cat}${levelChip(plugin)}${riskChip(plugin)}${health}${local}<span class="view">查看</span></footer>
@@ -427,7 +431,6 @@ function segButton(act, value, label, on, title = "") {
 function paintFilters() {
   const root = document.getElementById("filters");
   if (!root) return;
-  const sources = [[0, "全部"], [32, "本机"]];
   const levels = [[0, "全部"], [5, "L5"], [4, "L4"], [3, "L3"], [2, "L2"], [1, "L1"]];
   const sorts = [["stars", "Star"], ["level", "等级"], ["downloads", "下载"], ["name", "名称"]];
   const orders = [["desc", "降序", "从高到低，名称从 Z 到 A"], ["asc", "升序", "从低到高，名称从 A 到 Z"]];
@@ -435,7 +438,6 @@ function paintFilters() {
   const sortButtons = sorts.map(([value, label]) => segButton("sort", value, label, (state.sort || "stars") === value)).join("");
   const orderButtons = orders.map(([value, label, title]) => segButton("order", value, label, (state.order || "desc") === value, title)).join("");
   root.innerHTML = [
-    group("来源", sources.map(([value, label]) => segButton("src", value, label, state.src === value)).join("")),
     group("等级", levels.map(([value, label]) => segButton("level", value, label, state.level === value)).join("")),
     group("排序", `${sortButtons}<span class="seg-gap"></span>${orderButtons}`),
   ].join("");
@@ -567,7 +569,7 @@ async function renderMarket(my) {
     </section>
     </aside>
     <div class="market-main">
-    <div class="filter-strip" id="filters" aria-label="来源、等级和排序"></div>
+    <div class="filter-strip" id="filters" aria-label="等级和排序"></div>
     <div id="results"></div>
     </div>
     </div>
@@ -782,7 +784,7 @@ function pluginHtml(plugin) {
   return `<section class="page detail-page">
     <p class="crumb"><a href="${esc(marketHash())}">返回目录</a> / ${esc(cat)}</p>
     <header class="panel detail-hero">
-      <h1>${esc(plugin.name)}</h1>
+      <div class="detail-name">${pluginIcon(plugin, true)}<h1>${esc(plugin.name)}</h1></div>
       <p class="lede">${esc(plugin.desc || "暂无简介")}</p>
       <p class="meta-line">${repoLine}</p>
       ${clipped}

@@ -62,6 +62,7 @@ export const SOURCES = [
 let manifest = null;
 let items = [];
 let loaded = false;
+let icons = null;
 let loading = null;
 let revision = 0;
 const byId = new Map();
@@ -82,6 +83,22 @@ export function getItems() {
 
 export function isLoaded() {
   return loaded;
+}
+
+async function ensureIcons(version) {
+  if (icons) return icons;
+  try {
+    const response = await fetch(`./data/icons.json?v=${encodeURIComponent(version || "0")}`, { cache: "force-cache" });
+    icons = response.ok ? await response.json() : {};
+  } catch {
+    icons = {};
+  }
+  return icons;
+}
+
+function stampIcons(list) {
+  if (!icons) return;
+  for (const plugin of list) plugin.icon = icons[plugin.id] || "";
 }
 
 export function hydrate(row) {
@@ -118,6 +135,7 @@ export function ensureAll() {
       return items;
     }
     const version = encodeURIComponent(data.builtAt || "0");
+    await ensureIcons(data.builtAt || "0");
     const loadShard = async (shard) => {
       const response = await fetch(`./${shard}?v=${version}`, { cache: "force-cache" });
       if (!response.ok) throw new Error("分片加载失败");
@@ -126,6 +144,7 @@ export function ensureAll() {
     const publish = (rows) => {
       if (rev !== revision) return;
       items = rows.map(hydrate);
+      stampIcons(items);
       byId.clear();
       for (const plugin of items) byId.set(plugin.id, plugin);
       for (const fn of listeners) fn(items.length, data.total);
@@ -229,6 +248,7 @@ export function replaceItems(plugins, builtAt = new Date().toISOString()) {
   items = plugins.map((plugin) => {
     const next = { ...plugin, local: false };
     next.q = [next.name, next.desc, next.repo, next.npm, next.id, catLabel(next.cat)].filter(Boolean).join("\n").toLowerCase();
+    next.icon = icons?.[next.id] || "";
     return next;
   });
   byId.clear();

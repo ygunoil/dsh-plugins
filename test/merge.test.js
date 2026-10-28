@@ -220,3 +220,22 @@ test("register stores a hash, not the password", async () => {
   assert.equal(again.name, "海马");
   resetStoreForTests();
 });
+
+test("plugin icon stays when it is an https image", () => {
+  const merged = mergeRecords([
+    fromAwesome({
+      name: "Icon",
+      url: "https://github.com/Foo/Icon",
+      icon: "https://raw.githubusercontent.com/Foo/Icon/main/assets/icon.png",
+    }),
+    fromAwesome({
+      name: "Bad",
+      url: "https://github.com/Foo/Bad",
+      icon: "javascript:alert(1)",
+    }),
+  ]);
+  const icon = merged.find((item) => item.repo === "foo/icon");
+  const bad = merged.find((item) => item.repo === "foo/bad");
+  assert.equal(icon.icon, "https://raw.githubusercontent.com/Foo/Icon/main/assets/icon.png");
+  assert.equal(bad.icon, null);
+});

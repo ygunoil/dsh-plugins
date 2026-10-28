@@ -758,6 +758,10 @@ mark { background: rgba(77, 107, 254, 0.16); color: inherit; border-radius: 4px;
 }
 .stars { color: var(--blue-2); font-style: normal; white-space: nowrap; font-size: 13px; }
 .card-metrics { display: flex; gap: 10px; flex: none; align-items: baseline; margin-left: 8px; }
+.card-icon { width: 22px; height: 22px; flex: none; border-radius: 6px; object-fit: cover; background: #f4f7fb; }
+.card-icon.is-lg { width: 40px; height: 40px; border-radius: 10px; }
+.detail-name { display: flex; align-items: center; gap: 12px; }
+.detail-name h1 { margin: 0; }
 .card-metric { white-space: nowrap; }
 .card-metric b { color: var(--blue-2); font-size: 13px; font-weight: 600; }
 .card-metric small { margin-left: 3px; color: var(--muted); font-size: 11px; font-weight: 500; }
@@ -1148,7 +1152,7 @@ body.is-market .card {
   min-height: 0;
 }
 body.is-market .card-main { min-height: 0; overflow: hidden; padding: 12px 14px 4px; }
-body.is-market .card header { min-width: 0; }
+body.is-market .card header { min-width: 0; align-items: center; }
 body.is-market .card h3 {
   flex: 1;
   min-width: 0;
