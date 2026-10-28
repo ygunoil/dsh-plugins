@@ -33,6 +33,7 @@ let flash = "";
 let localRows = [];
 let renderedListKey = "";
 let fittedSize = pageSize;
+let settleFrame = 0;
 let resizeTimer = 0;
 let syncing = false;
 let queryTimer = 0;
@@ -293,10 +294,22 @@ function fitPageSize() {
   const results = document.getElementById("results");
   if (!results || results.clientWidth < 240 || results.clientHeight < 140) return fittedSize;
   const gap = 16;
-  const cardH = 228;
-  const gridH = results.clientHeight - 76;
-  const rows = Math.max(1, Math.floor((gridH + gap) / (cardH + gap)));
-  const cols = Math.max(1, Math.floor((results.clientWidth + gap) / (360 + gap)));
+  const maxCard = 228;
+  const minCard = 184;
+  const grid = results.querySelector(".grid");
+  const bar = results.querySelector(".result-bar");
+  const pagerEl = results.querySelector(".pager");
+  const chrome = (bar ? bar.offsetHeight + 8 : 28) + (pagerEl ? pagerEl.offsetHeight + 12 : 48);
+  const gridH = grid && grid.clientHeight > 120 ? grid.clientHeight : Math.max(0, results.clientHeight - chrome);
+  const width = grid && grid.clientWidth > 240 ? grid.clientWidth : results.clientWidth;
+  let rows = Math.max(1, Math.floor((gridH + gap) / (minCard + gap)));
+  let cardH = Math.floor((gridH - gap * (rows - 1)) / rows);
+  if (cardH > maxCard) {
+    rows = Math.max(1, Math.floor((gridH + gap) / (maxCard + gap)));
+    cardH = Math.min(maxCard, Math.floor((gridH - gap * (rows - 1)) / rows));
+  }
+  results.style.setProperty("--card-h", `${Math.max(minCard, cardH)}px`);
+  const cols = Math.max(1, Math.floor((width + gap) / (360 + gap)));
   return Math.min(pageSize, rows * cols);
 }
 
@@ -471,6 +484,15 @@ function paintResults() {
     ${pager(page, pages)}`;
   renderedListKey = stateListKey();
   paintHot();
+  if (settleFrame) cancelAnimationFrame(settleFrame);
+  settleFrame = requestAnimationFrame(() => {
+    settleFrame = 0;
+    if (!document.body.classList.contains("is-market") || !document.getElementById("results")) return;
+    const next = fitPageSize();
+    if (next === fittedSize) return;
+    fittedSize = next;
+    paintResults();
+  });
 }
 
 async function loadLocalRows() {

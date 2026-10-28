@@ -7,14 +7,20 @@
   <meta name="description" content="DeepSeek Harness 插件目录。五个公开来源去重后可检索、筛选和下载。">
   <meta name="theme-color" content="#f7f8fa">
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./app.css?v=20261029n">
+  <link rel="stylesheet" href="./app.css?v=20261029p">
 </head>
 <body>
   <header class="top">
     <a class="brand" href="#/market">
-      <svg class="mark" viewBox="0 0 64 64" aria-hidden="true">
-        <path fill="currentColor" d="M8 40c7-14 20-18 32-9 5 3 9 2 14-4-3 10-8 12-13 14 6 2 8 7 6 12-8-2-13-1-18 4-9 2-20-3-21-17z"/>
-        <circle cx="42" cy="29" r="2.2" fill="#fff"/>
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+        <defs>
+          <linearGradient id="dsh-mark" x1="4" y1="2" x2="28" y2="30" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#7C92FF"/>
+            <stop offset="1" stop-color="#3D5BFE"/>
+          </linearGradient>
+        </defs>
+        <rect width="32" height="32" rx="8" fill="url(#dsh-mark)"/>
+        <path fill="#fff" fill-rule="evenodd" d="M8.2 8h8.1c4.7 0 8 3.35 8 8s-3.3 8-8 8H8.2V8zm3.7 3.5v9h4.2c2.7 0 4.4-1.85 4.4-4.5s-1.7-4.5-4.4-4.5h-4.2z"/>
       </svg>
       <span>
         <strong>DSH Plugins</strong>
@@ -44,6 +50,6 @@
     </p>
   </footer>
   <noscript><p class="wrap">需要启用 JavaScript。目录数据在 <a href="./data/manifest.json">data/manifest.json</a>。</p></noscript>
-  <script src="./app.js?v=20261029n" type="module"></script>
+  <script src="./app.js?v=20261029p" type="module"></script>
 </body>
 </html>
