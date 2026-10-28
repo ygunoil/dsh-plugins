@@ -64,8 +64,17 @@ body.is-market .top-title {
   overflow: hidden;
   text-overflow: ellipsis;
   transform: translate(-50%, -50%);
-  pointer-events: none;
 }
+.top-title button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+.top-title button:hover { color: #4d6bfe; }
 #session { position: relative; z-index: 1; }
 .nav a, .btn, .btn-ghost { border-radius: 999px; padding: 8px 14px; }
 .nav a.is-on, .nav a:hover { background: transparent; color: #4d6bfe; }
@@ -975,6 +984,49 @@ body.is-market .market-side .composer input {
   font-size: 14px;
 }
 body.is-market .market-side .composer-go { flex: none; width: 32px; height: 32px; }
+body.is-market .market-side .composer { z-index: 4; }
+body.is-market .market-side .composer:focus-within {
+  box-shadow: 0 0 0 4px rgba(77, 107, 254, 0.14);
+}
+.seek-hits {
+  position: absolute;
+  z-index: 5;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+}
+.seek-hits[hidden] { display: none !important; }
+.seek-hit {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: 12px;
+}
+.seek-hit span { display: grid; min-width: 0; }
+.seek-hit strong, .seek-hit small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.seek-hit small { color: var(--muted); font-size: 12px; }
+.seek-hit em {
+  margin-left: auto;
+  color: var(--blue);
+  font-style: normal;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.seek-hit.is-on, .seek-hit:hover { background: rgba(77, 107, 254, 0.1); }
+.seek-empty { margin: 0; padding: 8px 10px; color: var(--muted); font-size: 13px; }
 body.is-market .popular { max-width: min(860px, 100%); }
 body.is-market .popular-grid {
   max-height: 32px;

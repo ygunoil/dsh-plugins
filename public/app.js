@@ -38,6 +38,7 @@ let resizeTimer = 0;
 let syncing = false;
 let queryTimer = 0;
 let composing = false;
+let seekPick = -1;
 let remoteToken = 0;
 let catQuery = "";
 let hotOpen = true;
@@ -537,10 +538,11 @@ async function renderMarket(my) {
     <div class="market">
     <aside class="market-side">
     <form class="composer" id="seek-form">
-      <input id="seek-q" type="search" placeholder="搜索插件" autocomplete="off" aria-label="搜索插件" enterkeyhint="search">
+      <input id="seek-q" type="search" placeholder="快速找到插件" autocomplete="off" aria-label="快速找到插件" aria-controls="seek-hits" aria-autocomplete="list" enterkeyhint="search">
       <button class="composer-go" type="submit" aria-label="搜索">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6M6.5 11.5 12 6l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
+      <div id="seek-hits" class="seek-hits" role="listbox" hidden></div>
     </form>
     <section class="cat-board" id="cats" aria-label="分类">
       <div class="cat-head"><span>分类</span><span id="cat-status"></span></div>
@@ -587,11 +589,47 @@ async function renderMarket(my) {
   });
   seek.addEventListener("input", (event) => {
     if (composing) return;
+    seekPick = -1;
     applyQuery(event.target.value);
+    paintSeekHits();
+  });
+  seek.addEventListener("focus", () => paintSeekHits());
+  seek.addEventListener("keydown", (event) => {
+    const hits = [...document.querySelectorAll("#seek-hits [data-seek-hit]")];
+    if (event.key === "ArrowDown" && hits.length) {
+      event.preventDefault();
+      seekPick = Math.min(hits.length - 1, seekPick + 1);
+      paintSeekHits();
+      return;
+    }
+    if (event.key === "ArrowUp" && hits.length) {
+      event.preventDefault();
+      seekPick = Math.max(0, seekPick - 1);
+      paintSeekHits();
+      return;
+    }
+    if (event.key === "Enter" && seekPick >= 0 && hits[seekPick]) {
+      event.preventDefault();
+      hits[seekPick].click();
+      return;
+    }
+    if (event.key === "Escape") {
+      const box = document.getElementById("seek-hits");
+      if (!box || box.hidden) return;
+      event.preventDefault();
+      box.hidden = true;
+      seekPick = -1;
+    }
   });
   document.getElementById("seek-form").addEventListener("submit", (event) => {
     event.preventDefault();
+    const picked = document.querySelector("#seek-hits [data-seek-hit].is-on");
+    if (picked) {
+      picked.click();
+      return;
+    }
     applyQuery(seek.value.trim(), true);
+    paintSeekHits();
   });
   paintCats();
   paintFilters();
@@ -1221,6 +1259,29 @@ async function ingest(file) {
   await draw();
 }
 
+function paintSeekHits() {
+  const box = document.getElementById("seek-hits");
+  const input = document.getElementById("seek-q");
+  if (!box || !input) return;
+  const query = input.value.trim();
+  input.setAttribute("aria-expanded", query && document.activeElement === input ? "true" : "false");
+  if (!query || document.activeElement !== input) {
+    box.hidden = true;
+    box.innerHTML = "";
+    return;
+  }
+  const base = state.src === 32 ? localRows : getItems();
+  const hits = filterPlugins(base, { q: query, sort: "stars" }).slice(0, 6);
+  if (seekPick >= hits.length) seekPick = hits.length - 1;
+  if (!hits.length) {
+    box.hidden = false;
+    box.innerHTML = `<p class="seek-empty">没有直接匹配，换个名字或仓库再试。</p>`;
+    return;
+  }
+  box.hidden = false;
+  box.innerHTML = hits.map((plugin, index) => `<a class="seek-hit${index === seekPick ? " is-on" : ""}" role="option" aria-selected="${index === seekPick ? "true" : "false"}" data-seek-hit="${index}" href="${esc(pluginHref(plugin.id))}"><span><strong>${hi(plugin.name)}</strong><small>${esc(plugin.repo || plugin.npm || catLabel(plugin.cat) || "")}</small></span><em>${plugin.stars ? esc(compact(plugin.stars)) : ""}</em></a>`).join("");
+}
+
 function applyQuery(value, immediate = false) {
   state.q = value;
   state.page = 1;
@@ -1235,6 +1296,24 @@ function applyQuery(value, immediate = false) {
   if (immediate) run();
   else queryTimer = setTimeout(run, 160);
 }
+
+document.getElementById("quick-find")?.addEventListener("click", () => {
+  const input = document.getElementById("seek-q");
+  if (!input) return;
+  input.focus();
+  const end = input.value.length;
+  input.setSelectionRange(end, end);
+});
+
+document.addEventListener("pointerdown", (event) => {
+  if (event.target.closest("#seek-form")) return;
+  const box = document.getElementById("seek-hits");
+  if (!box || box.hidden) return;
+  box.hidden = true;
+  seekPick = -1;
+  const input = document.getElementById("seek-q");
+  if (input) input.setAttribute("aria-expanded", "false");
+});
 
 document.body.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-act]");
