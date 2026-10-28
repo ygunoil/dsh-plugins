@@ -512,17 +512,7 @@ async function renderMarket(my) {
       </div>
       <p class="stage-news" id="catalog-note">${catalogNote(manifest)}</p>
       <h1>找到合适的插件</h1>
-      <section class="popular" id="popular" aria-label="热门搜索">
-        <div class="popular-grid" id="hot-tags"></div>
-      </section>
     </section>
-    <div class="add-banner">
-      <div><b>装进 DSH</b><span>Web 复制终端命令执行。Desktop 保持应用打开，左侧「插件」点「添加插件」，粘贴包名或地址，装完点「立即启用」。不要去设置里装，也不要先退出。两边不互通。</span></div>
-      <div class="banner-cmds">
-        <code>dsh plugin --profile web add …</code>
-        <code>侧栏「插件」→ 添加插件</code>
-      </div>
-    </div>
     <div class="market">
     <aside class="market-side">
     <form class="composer" id="seek-form">
