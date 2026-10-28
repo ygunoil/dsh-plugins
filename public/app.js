@@ -672,6 +672,76 @@ function uploadToPlugin(row) {
   return plugin;
 }
 
+function factRow(plugin) {
+  const cat = plugin.cat && plugin.cat !== "other" ? catLabel(plugin.cat) : "未分类";
+  const items = [
+    ["分类", cat],
+    ["等级", plugin.level ? `L${plugin.level}` : "—", plugin.level ? "dsh.so 的标注，本站没有复验" : ""],
+    ["风险", plugin.risk ? (RISK[plugin.risk] || "—") : "—"],
+    ["语言", plugin.lang || "—"],
+    ["版本", shownVersion(plugin) || "—"],
+    ["Star", plugin.stars ? compact(plugin.stars) : "—", plugin.stars ? num(plugin.stars) : "", "fact-star"],
+    ["下载", plugin.downloads ? compact(plugin.downloads) : "—", plugin.downloads ? num(plugin.downloads) : ""],
+    ["状态", plugin.health ? (HEALTH[plugin.health] || "异常") : (plugin.repo ? "未见异常" : "—"), "", "", Boolean(plugin.health)],
+  ];
+  return `<dl class="fact-row">${items.map(([label, value, title, id, bad]) => `<div><dt>${esc(label)}</dt><dd${id ? ` id="${id}"` : ""}${title ? ` title="${esc(title)}"` : ""}${bad ? ` class="is-bad"` : ""}>${esc(value)}</dd></div>`).join("")}</dl>`;
+}
+
+function originSheet(plugin) {
+  const repoUrl = githubUrl(plugin.repo);
+  const page = safeUrl(plugin.page);
+  const dsh = safeUrl(plugin.dsh);
+  const npm = npmUrl(plugin.npm);
+  const rows = [];
+  const push = (label, html) => {
+    if (html) rows.push(`<div><dt>${esc(label)}</dt><dd>${html}</dd></div>`);
+  };
+  push("仓库", repoUrl ? `<a href="${esc(repoUrl)}" target="_blank" rel="noopener noreferrer">${esc(plugin.repo)}</a>` : "");
+  push("npm", npm ? `<a href="${esc(npm)}" target="_blank" rel="noopener noreferrer">${esc(plugin.npm)}</a>` : "");
+  push("dsh.so", dsh ? `<a href="${esc(dsh)}" target="_blank" rel="noopener noreferrer">制品页</a>` : "");
+  push("上游", page ? `<a href="${esc(page)}" target="_blank" rel="noopener noreferrer">收录页</a>` : "");
+  push("安装目标", plugin.install ? esc(addTarget(plugin.install)) : "");
+  push("编号", plugin.id ? `<code>${esc(plugin.id)}</code>` : "");
+  if (!rows.length) return "";
+  return `<h2 class="install-title">原文和标识</h2><dl class="sheet">${rows.join("")}</dl>`;
+}
+
+const SOURCE_NOTE = {
+  1: "GitHub 上带 dsh-plugin topic",
+  2: "dshmarket.com 收录",
+  4: "awesome-dsh-plugin 收录",
+  8: "创意工坊收录",
+  16: "dsh.so 制品页",
+};
+
+function sourceLines(plugin) {
+  if (plugin.local) return `<li><b>本机</b><span>登录后上传的 zip，只存在这台浏览器。</span></li>`;
+  const rows = SOURCE_LABEL
+    .filter(([bit]) => plugin.src & bit)
+    .map(([bit, label]) => `<li><b>${esc(label)}</b><span>${esc(SOURCE_NOTE[bit] || "")}</span></li>`);
+  return rows.join("") || `<li><span>目录里没有来源标记。</span></li>`;
+}
+
+function shownDesc(text) {
+  return String(text || "").replace(/:[a-z0-9_+-]+:/gi, " ").replace(/\s+/g, " ").trim();
+}
+
+function relatedHtml(plugin) {
+  if (!plugin.cat || plugin.cat === "other" || plugin.cat === "local" || !getItems().length) return "";
+  const related = getItems()
+    .filter((item) => item.cat === plugin.cat && item.id !== plugin.id && item.health !== 1)
+    .sort((a, b) => (b.stars || 0) - (a.stars || 0) || String(a.name).localeCompare(String(b.name)))
+    .slice(0, 4);
+  if (!related.length) return "";
+  const cards = related.map((item) => `<a class="relate" href="${esc(pluginHref(item.id))}">
+      <header><strong>${esc(item.name)}</strong>${item.stars ? `<em>${esc(compact(item.stars))}</em>` : ""}</header>
+      <p>${esc(shownDesc(item.desc) || item.repo || item.npm || "暂无简介")}</p>
+    </a>`).join("");
+  return `<h2 class="install-title">同分类</h2>
+    <div class="relate-grid">${cards}</div>
+    <p class="more-cat"><a href="#/market?cat=${esc(plugin.cat)}">查看全部${esc(catLabel(plugin.cat))}</a></p>`;
+}
+
 function pluginHtml(plugin) {
   const repoUrl = githubUrl(plugin.repo);
   const zip = repoUrl && ![1, 2, 3].includes(plugin.health) ? `${repoUrl}/archive/HEAD.zip` : "";
@@ -687,22 +757,33 @@ function pluginHtml(plugin) {
     plugin.page ? `<a class="btn btn-ghost" href="${esc(safeUrl(plugin.page))}" target="_blank" rel="noopener noreferrer">awesome</a>` : "",
     npmUrl(plugin.npm) ? `<a class="btn btn-ghost" href="${esc(npmUrl(plugin.npm))}" target="_blank" rel="noopener noreferrer">npm</a>` : "",
   ].join("");
-  const install = installRows(plugin.install);
   const repoLine = repoUrl
     ? `<a href="${esc(repoUrl)}" target="_blank" rel="noopener noreferrer">${esc(plugin.repo)}</a>`
     : esc(plugin.npm || "没有公开仓库");
+  const clipped = repoUrl && plugin.desc && plugin.desc.length >= 180 && /…$/.test(plugin.desc)
+    ? `<p class="meta-line">目录简介被截短了，完整说明在下方仓库 README。</p>`
+    : "";
+  const readmeSlot = repoUrl
+    ? `<p class="muted">正在读取仓库说明…</p>`
+    : `<p class="muted">这条没有 GitHub 仓库。上面的简介、安装命令和原文链接就是目录里的全部信息。</p>`;
   return `<section class="page detail-page">
     <p class="crumb"><a href="${esc(marketHash())}">返回目录</a> / ${esc(cat)}</p>
+    <header class="panel detail-hero">
+      <h1>${esc(plugin.name)}</h1>
+      <p class="lede">${esc(plugin.desc || "暂无简介")}</p>
+      <p class="meta-line">${repoLine}</p>
+      ${clipped}
+      ${factRow(plugin)}
+    </header>
     <div class="detail-grid">
       <article class="panel">
-        <h1>${esc(plugin.name)}</h1>
-        <p class="lede">${esc(plugin.desc || "暂无简介")}</p>
-        <p class="meta-line">${repoLine}</p>
         <h2 class="install-title">装进 Web 或 Desktop</h2>
-        ${install}
+        ${installRows(plugin.install)}
         ${installGuide(plugin)}
+        ${originSheet(plugin)}
         <h2 class="install-title">仓库说明</h2>
-        <div id="repo-live" class="repo-live" data-repo="${esc(repoUrl)}"><p class="muted">${repoUrl ? "正在读取仓库说明…" : "这条没有 GitHub 仓库。"}</p></div>
+        <div id="repo-live" class="repo-live" data-repo="${esc(repoUrl)}" data-desc="${esc(plugin.desc || "")}">${readmeSlot}</div>
+        ${relatedHtml(plugin)}
       </article>
       <aside class="side">
         ${warn}
@@ -712,7 +793,8 @@ function pluginHtml(plugin) {
           <div class="stat"><b>${esc(shownVersion(plugin) || "—")}</b><span>版本</span></div>
           <div class="stat"><b>${esc(plugin.lang || "—")}</b><span>语言</span></div>
         </div>
-        <div class="split">${levelChip(plugin)}${riskChip(plugin)}${plugin.health ? `<span class="pill pill-risk">${esc(HEALTH[plugin.health])}</span>` : ""}${plugin.local ? `<span class="pill">本机</span>` : sourcePills(plugin.src)}</div>
+        <h2 class="side-title">收录来源</h2>
+        <ul class="source-list">${sourceLines(plugin)}</ul>
         <div class="actions">${links}</div>
         <p class="drawer-note muted">${plugin.local ? "Web 在终端安装。Desktop 把解压目录的绝对路径粘进侧栏「插件 → 添加插件」。网页不会安装。" : `Web 用终端命令。Desktop 在侧栏「插件 → 添加插件」粘贴上面那一段，装完点「立即启用」。${zip ? "仓库 zip 只是源码。" : ""}${plugin.dsh ? "等级和风险来自 dsh.so，本站没有复验。" : ""}`}</p>
       </aside>
@@ -972,23 +1054,33 @@ function shownVersion(plugin) {
 
 function installGuide(plugin) {
   const github = String(plugin.install || "").includes(" github:");
-  const steps = plugin.local
+  const web = plugin.local
     ? [
         "先下载 zip 并解压。这个网页不会把它装进 DSH。",
-        "Web：在解压目录的上一级执行 Web 命令，然后重新运行 dsh web。",
-        "Desktop：应用保持打开。左侧「插件」点「添加插件」，把解压目录的绝对路径粘进去，再点「安装」。不要粘贴 ./目录名。",
-        "装完点「立即启用」。若提示需要重启，再完全退出后重新打开。关窗口只是隐藏。Web 和 Desktop 各有一份，不互通。",
+        "在解压目录的上一级执行上面的 Web 命令。",
+        "重新运行 dsh web。终端里没有 dsh 时，在命令前加 npx @deepseek-ai/dsh。",
       ]
     : [
-        "Web 和 Desktop 要各装一次。网页不会替你安装。",
-        "Web：复制上面的命令，到终端执行，然后重新运行 dsh web。",
-        "Desktop：应用保持打开。左侧「插件」点「添加插件」，把上面 Desktop 那一行粘进去，再点「安装」。不要去「设置」里装。",
+        "复制上面的 Web 命令，到终端执行。",
+        "执行完重新运行 dsh web。",
+        "终端里没有 dsh 时，在命令前加 npx @deepseek-ai/dsh。这条不能用来装 Desktop。",
+      ];
+  const desktop = plugin.local
+    ? [
+        "应用保持打开。左侧「插件」点「添加插件」。",
+        "把解压目录的绝对路径粘进去，再点「安装」。不要粘贴 ./目录名。",
+        "装完点「立即启用」。若提示需要重启，再完全退出后重新打开。关窗口只是隐藏。",
+      ]
+    : [
+        "应用保持打开。左侧「插件」点「添加插件」，不要去「设置」里装。",
+        "把上面 Desktop 那一行粘进去，再点「安装」。",
         "装完点「立即启用」。若提示需要重启，再完全退出后重新打开。不要用 npm 或 npx 的 dsh 执行 --profile desktop。",
       ];
-  const notes = ["Web 的终端里没有 dsh 时，可以在命令前加 npx @deepseek-ai/dsh。这条不能用来装 Desktop。Desktop 的命令行只认应用菜单「管理 dsh 命令…」装上的 dsh，而且要先完全退出，关窗口不算。"];
+  const notes = ["Desktop 的命令行只认应用菜单「管理 dsh 命令…」装上的 dsh，而且要先完全退出，关窗口不算。Web 和 Desktop 各有一份，不互通。"];
   if (github) notes.unshift("这是从 GitHub 安装源码。如果提示要允许构建，只在信任这个仓库时允许，然后把命令再执行一次。");
   if (!plugin.local && plugin.repo) notes.push("「仓库 zip」只是源码压缩包，不能代替上面的安装命令。");
-  return `<ol class="how">${steps.map((step) => `<li>${esc(step)}</li>`).join("")}</ol>
+  const column = (title, steps) => `<section class="install-board"><h3>${title}</h3><ol class="how">${steps.map((step) => `<li>${esc(step)}</li>`).join("")}</ol></section>`;
+  return `<div class="install-boards">${column("Web", web)}${column("Desktop", desktop)}</div>
     <p class="drawer-note muted">${notes.map(esc).join("<br>")}</p>`;
 }
 
@@ -1076,7 +1168,7 @@ function linkDumpTitle(lines) {
 }
 
 function renderReadme(raw, repoUrl) {
-  const text = stripBadges(readableSource(raw)).slice(0, 8000);
+  const text = stripBadges(readableSource(raw)).slice(0, 14000);
   const blocks = text.split("```");
   return blocks.map((block, index) => {
     if (index % 2 === 1) {
@@ -1106,14 +1198,40 @@ function renderReadme(raw, repoUrl) {
   }).join("");
 }
 
+function remoteFacts(slot, data) {
+  const catalog = slot.dataset.desc || "";
+  const about = data.about && !catalog.includes(String(data.about).slice(0, 48))
+    ? `<p class="repo-about">${esc(data.about)}</p>`
+    : "";
+  const pills = [];
+  if (data.forks != null) pills.push(`<span class="pill">Fork ${esc(compact(data.forks))}</span>`);
+  if (data.issues != null) pills.push(`<span class="pill">${esc(num(data.issues))} 个开放 issue</span>`);
+  if (data.license) pills.push(`<span class="pill">${esc(data.license)}</span>`);
+  if (data.branch) pills.push(`<span class="pill">${esc(data.branch)}</span>`);
+  if (data.created) pills.push(`<span class="pill">创建于 ${esc(day(data.created))}</span>`);
+  if (data.homepage) pills.push(`<a class="pill" href="${esc(data.homepage)}" target="_blank" rel="noopener noreferrer">项目主页</a>`);
+  for (const topic of data.topics || []) pills.push(`<span class="pill">${esc(topic)}</span>`);
+  const row = pills.length ? `<div class="repo-facts">${pills.join("")}</div>` : "";
+  return `${about}${row}`;
+}
+
 function paintRemote(slot, data) {
   const star = document.getElementById("live-star");
-  if (star && data.stars != null) star.textContent = compact(data.stars);
+  const factStar = document.getElementById("fact-star");
+  if (data.stars != null) {
+    const text = compact(data.stars);
+    if (star) star.textContent = text;
+    if (factStar) {
+      factStar.textContent = text;
+      factStar.title = num(data.stars);
+    }
+  }
   const when = data.pushed ? `仓库更新于 ${esc(day(data.pushed))}` : "说明来自 GitHub";
+  const facts = remoteFacts(slot, data);
   const body = data.readme
     ? `<div class="readme"><p class="muted">${when}</p>${renderReadme(data.readme, slot.dataset.repo || "")}</div>`
     : `<p class="muted">${when}。仓库没有可读取的 README。</p>`;
-  slot.innerHTML = body;
+  slot.innerHTML = `${facts}${body}`;
   const readme = slot.querySelector(".readme");
   if (readme && readme.scrollHeight > 760) {
     readme.classList.add("is-clipped");
@@ -1126,7 +1244,7 @@ async function loadRemote(plugin) {
   const repoUrl = githubUrl(plugin.repo);
   if (!slot || !repoUrl) return;
   const mine = ++remoteToken;
-  const cacheKey = `dsh-repo:4:${plugin.repo}`;
+  const cacheKey = `dsh-repo:5:${plugin.repo}`;
   try {
     const cached = JSON.parse(sessionStorage.getItem(cacheKey) || "null");
     if (cached && Date.now() - cached.at < 10 * 60 * 1000) {
@@ -1152,8 +1270,24 @@ async function loadRemote(plugin) {
       return;
     }
     const repo = repoResponse.ok ? await repoResponse.json() : null;
-    const readme = readmeResponse.ok ? readableSource(await readmeResponse.text()).slice(0, 8000) : "";
-    const data = { pushed: repo?.pushed_at || "", stars: repo?.stargazers_count ?? null, readme, at: Date.now() };
+    const readme = readmeResponse.ok ? readableSource(await readmeResponse.text()).slice(0, 14000) : "";
+    const license = repo?.license?.spdx_id && repo.license.spdx_id !== "NOASSERTION"
+      ? repo.license.spdx_id
+      : (repo?.license?.name || "");
+    const data = {
+      pushed: repo?.pushed_at || "",
+      created: repo?.created_at || "",
+      stars: repo?.stargazers_count ?? null,
+      forks: repo?.forks_count ?? null,
+      issues: repo?.open_issues_count ?? null,
+      license,
+      homepage: safeUrl(repo?.homepage || ""),
+      topics: Array.isArray(repo?.topics) ? repo.topics.slice(0, 8) : [],
+      about: String(repo?.description || "").slice(0, 280),
+      branch: repo?.default_branch || "",
+      readme,
+      at: Date.now(),
+    };
     try { sessionStorage.setItem(cacheKey, JSON.stringify(data)); } catch { /* quota */ }
     if (mine === remoteToken && slot.isConnected) paintRemote(slot, data);
   } catch {
