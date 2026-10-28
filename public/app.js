@@ -511,7 +511,6 @@ async function renderMarket(my) {
         <div class="stage-floor"></div>
       </div>
       <p class="stage-news" id="catalog-note">${catalogNote(manifest)}</p>
-      <h1>找到合适的插件</h1>
     </section>
     <div class="market">
     <aside class="market-side">

@@ -44,6 +44,28 @@ button, input, select { font: inherit; color: inherit; }
 .brand small, .muted, .foot, .card .desc, .lede, .repo { color: var(--muted); }
 .mark { width: 32px; height: 32px; color: var(--blue); }
 .nav { display: flex; gap: 4px; margin-left: auto; }
+.top-title {
+  display: none;
+  margin: 0;
+  color: #243044;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  white-space: nowrap;
+}
+body.is-market .top-title { display: block; }
+.top .fresh {
+  flex: 0 1 auto;
+  max-width: min(420px, 34vw);
+  margin: 0;
+  padding: 0;
+  justify-content: flex-end;
+}
+.top .fresh span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .nav a, .btn, .btn-ghost { border-radius: 999px; padding: 8px 14px; }
 .nav a.is-on, .nav a:hover { background: transparent; color: #4d6bfe; }
 .btn, .btn-ghost, .pager button { border: 0; cursor: pointer; }
@@ -870,18 +892,7 @@ body.is-market {
 }
 html:has(body.is-market) { height: 100%; overflow: hidden; }
 body.is-market .top { z-index: 30; padding-block: 8px; }
-body.is-market .fresh {
-  position: absolute;
-  top: calc(var(--top-h, 52px) + 2px);
-  left: 0;
-  right: 0;
-  z-index: 4;
-  height: auto;
-  padding: 0 28px;
-  pointer-events: none;
-}
-body.is-market .fresh .btn,
-body.is-market .fresh button { pointer-events: auto; }
+body.is-market .fresh { position: static; height: auto; pointer-events: auto; }
 body.is-market #app {
   position: relative;
   z-index: 1;
@@ -901,10 +912,10 @@ body.is-market .page {
 body.is-market .stage {
   isolation: auto;
   flex: 0 0 auto;
-  align-content: start;
-  min-height: max-content;
-  margin: 0 -28px;
-  padding: 18px 28px 2px;
+  height: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
   overflow: visible;
 }
 body.is-market .stage-scene { position: fixed; inset: 0; z-index: 0; }
