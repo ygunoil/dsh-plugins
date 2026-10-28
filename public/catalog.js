@@ -151,11 +151,14 @@ export function getById(id) {
   return byId.get(id) || items.find((plugin) => plugin.id === id) || null;
 }
 
-function tieBreak(sort) {
-  if (sort === "name") return (a, b) => a.name.localeCompare(b.name, "zh");
-  if (sort === "level") return (a, b) => b.level - a.level || b.stars - a.stars;
-  if (sort === "downloads") return (a, b) => (b.downloads || 0) - (a.downloads || 0) || b.stars - a.stars;
-  return (a, b) => b.stars - a.stars || a.name.localeCompare(b.name, "zh");
+function comparePlugins(sort, order) {
+  const dir = order === "asc" ? 1 : -1;
+  const byName = (a, b) => String(a.name || "").localeCompare(String(b.name || ""), "zh");
+  const stars = (plugin) => plugin.stars || 0;
+  if (sort === "name") return (a, b) => byName(a, b) * dir || (stars(b) - stars(a));
+  if (sort === "level") return (a, b) => ((a.level || 0) - (b.level || 0)) * dir || (stars(b) - stars(a)) || byName(a, b);
+  if (sort === "downloads") return (a, b) => ((a.downloads || 0) - (b.downloads || 0)) * dir || (stars(b) - stars(a)) || byName(a, b);
+  return (a, b) => (stars(a) - stars(b)) * dir || byName(a, b);
 }
 
 function scoreToken(plugin, token) {
@@ -188,6 +191,7 @@ export function catalogListKey(params) {
   const src = get("src");
   const level = get("lv");
   const sort = get("sort");
+  const order = get("ord");
   const page = get("page");
   return [
     get("q"),
@@ -195,23 +199,27 @@ export function catalogListKey(params) {
     src === "0" ? "" : src,
     level === "0" ? "" : level,
     !sort || sort === "stars" ? "" : sort,
+    order === "asc" ? "asc" : "",
     !page || page === "1" ? "" : page,
   ].join("|");
 }
 
-export function filterPlugins(list, { q = "", cat = "", src = 0, level = 0, sort = "stars" } = {}) {
+export function filterPlugins(list, { q = "", cat = "", src = 0, level = 0, sort = "stars", order = "desc" } = {}) {
   const needle = q.trim().toLowerCase();
   const tokens = needle.split(/\s+/).filter(Boolean);
+  const direction = order === "asc" ? "asc" : "desc";
+  const field = ["name", "level", "downloads"].includes(sort) ? sort : "stars";
   let out = list;
   if (tokens.length) out = out.filter((plugin) => tokens.every((token) => plugin.q.includes(token)));
   if (cat) out = out.filter((plugin) => plugin.cat === cat);
   if (src) out = out.filter((plugin) => plugin.src & src);
   if (level) out = out.filter((plugin) => plugin.level === Number(level));
-  if (tokens.length) {
-    const tie = tieBreak(sort);
+  const relevance = tokens.length && field === "stars" && direction === "desc";
+  if (relevance) {
+    const tie = comparePlugins("stars", "desc");
     out = out.slice().sort((a, b) => matchScore(b, needle) - matchScore(a, needle) || tie(a, b));
-  } else if (sort !== "stars") {
-    out = out.slice().sort(tieBreak(sort));
+  } else if (field !== "stars" || direction === "asc") {
+    out = out.slice().sort(comparePlugins(field, direction));
   }
   return out;
 }

@@ -21,11 +21,11 @@ import {
   onProgress,
   replaceItems,
   catalogListKey,
-} from "./catalog.js?v=20261029t";
+} from "./catalog.js?v=20261029w";
 import { readPackageJson } from "./zip.js?v=20261027";
 
 const app = document.querySelector("#app");
-const state = { q: "", cat: "", src: 0, level: 0, sort: "stars", page: 1 };
+const state = { q: "", cat: "", src: 0, level: 0, sort: "stars", order: "desc", page: 1 };
 const pageSize = 24;
 let token = 0;
 let unsub = null;
@@ -127,6 +127,7 @@ function marketHash() {
   if (state.src) params.set("src", String(state.src));
   if (state.level) params.set("lv", String(state.level));
   if (state.sort && state.sort !== "stars") params.set("sort", state.sort);
+  if (state.order === "asc") params.set("ord", "asc");
   if (state.page > 1) params.set("page", String(state.page));
   const query = params.toString();
   return query ? `#/market?${query}` : "#/market";
@@ -137,7 +138,8 @@ function applyMarketParams(params) {
   state.cat = params.get("cat") || "";
   state.src = Number(params.get("src") || 0);
   state.level = Number(params.get("lv") || 0);
-  state.sort = params.get("sort") || "stars";
+  state.sort = ["level", "downloads", "name"].includes(params.get("sort")) ? params.get("sort") : "stars";
+  state.order = params.get("ord") === "asc" ? "asc" : "desc";
   state.page = Math.max(1, Number(params.get("page") || 1) || 1);
 }
 
@@ -213,6 +215,7 @@ function pluginHref(id) {
   if (state.src) params.set("src", String(state.src));
   if (state.level) params.set("lv", String(state.level));
   if (state.sort && state.sort !== "stars") params.set("sort", state.sort);
+  if (state.order === "asc") params.set("ord", "asc");
   if (state.page > 1) params.set("page", String(state.page));
   return `#/plugin?${params}`;
 }
@@ -410,8 +413,9 @@ function applyCatFilter() {
   else status.textContent = "点选分类，也可以和顶部搜索一起用";
 }
 
-function segButton(act, value, label, on) {
-  return `<button type="button" class="seg${on ? " is-on" : ""}" data-act="${act}" data-value="${esc(value)}" aria-pressed="${on ? "true" : "false"}">${esc(label)}</button>`;
+function segButton(act, value, label, on, title = "") {
+  const tip = title ? ` title="${esc(title)}"` : "";
+  return `<button type="button" class="seg${on ? " is-on" : ""}" data-act="${act}" data-value="${esc(value)}" aria-pressed="${on ? "true" : "false"}"${tip}>${esc(label)}</button>`;
 }
 
 function paintFilters() {
@@ -420,11 +424,14 @@ function paintFilters() {
   const sources = [[0, "全部"], [1, "topic"], [2, "market"], [4, "awesome"], [8, "工坊"], [16, "dsh.so"], [32, "本机"]];
   const levels = [[0, "全部"], [5, "L5"], [4, "L4"], [3, "L3"], [2, "L2"], [1, "L1"]];
   const sorts = [["stars", "Star"], ["level", "等级"], ["downloads", "下载"], ["name", "名称"]];
+  const orders = [["desc", "降序", "从高到低，名称从 Z 到 A"], ["asc", "升序", "从低到高，名称从 A 到 Z"]];
   const group = (label, html) => `<div class="seg-group"><span>${label}</span><div>${html}</div></div>`;
+  const sortButtons = sorts.map(([value, label]) => segButton("sort", value, label, (state.sort || "stars") === value)).join("");
+  const orderButtons = orders.map(([value, label, title]) => segButton("order", value, label, (state.order || "desc") === value, title)).join("");
   root.innerHTML = [
     group("来源", sources.map(([value, label]) => segButton("src", value, label, state.src === value)).join("")),
     group("等级", levels.map(([value, label]) => segButton("level", value, label, state.level === value)).join("")),
-    group("排序", sorts.map(([value, label]) => segButton("sort", value, label, (state.sort || "stars") === value)).join("")),
+    group("排序", `${sortButtons}<span class="seg-gap"></span>${orderButtons}`),
   ].join("");
 }
 
@@ -465,7 +472,7 @@ function paintResults() {
   const { page, pages, slice } = currentPage(filtered);
   const loading = !isLoaded() && state.src !== 32;
   const queryLabel = state.q.trim();
-  const extra = Boolean(state.cat || state.src || state.level || (state.sort && state.sort !== "stars"));
+  const extra = Boolean(state.cat || state.src || state.level || (state.sort && state.sort !== "stars") || state.order === "asc");
   const filtering = Boolean(queryLabel || extra);
   const catName = state.cat ? catLabel(state.cat) : "";
   const hit = categoryHit();
@@ -1477,7 +1484,7 @@ document.body.addEventListener("click", async (event) => {
       syncSearch();
     }
   }
-  if (act === "cat" || act === "src" || act === "level" || act === "sort") {
+  if (act === "cat" || act === "src" || act === "level" || act === "sort" || act === "order") {
     event.preventDefault();
     if (act === "cat") {
       const nextCat = button.dataset.cat || "";
@@ -1488,7 +1495,8 @@ document.body.addEventListener("click", async (event) => {
     }
     if (act === "src") state.src = Number(button.dataset.value);
     if (act === "level") state.level = Number(button.dataset.value);
-    if (act === "sort") state.sort = button.dataset.value || "stars";
+    if (act === "sort") state.sort = ["level", "downloads", "name"].includes(button.dataset.value) ? button.dataset.value : "stars";
+    if (act === "order") state.order = button.dataset.value === "asc" ? "asc" : "desc";
     state.page = 1;
     const next = marketHash();
     if (location.hash !== next) location.hash = next;
@@ -1515,6 +1523,7 @@ document.body.addEventListener("click", async (event) => {
     state.src = 0;
     state.level = 0;
     state.sort = "stars";
+    state.order = "desc";
     state.page = 1;
     syncSearch();
     const next = marketHash();

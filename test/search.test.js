@@ -58,3 +58,34 @@ test("list key ignores the open plugin and default sort", () => {
   const plain = new URLSearchParams("q=archify");
   assert.equal(catalogListKey(open), catalogListKey(plain));
 });
+
+test("sort honors ascending and descending", () => {
+  const items = [
+    Object.assign(row("beta", { stars: 10 }), { downloads: 5, level: 1 }),
+    Object.assign(row("alpha", { stars: 30 }), { downloads: 1, level: 3 }),
+    Object.assign(row("mid", { stars: 20 }), { downloads: 9, level: 2 }),
+  ];
+  const names = (sort, order) => filterPlugins(items, { sort, order }).map((item) => item.name);
+  assert.deepEqual(names("stars", "asc"), ["beta", "mid", "alpha"]);
+  assert.deepEqual(names("downloads", "desc"), ["mid", "beta", "alpha"]);
+  assert.deepEqual(names("downloads", "asc"), ["alpha", "beta", "mid"]);
+  assert.deepEqual(names("level", "asc"), ["beta", "mid", "alpha"]);
+  assert.deepEqual(names("level", "desc"), ["alpha", "mid", "beta"]);
+  assert.deepEqual(names("name", "asc"), ["alpha", "beta", "mid"]);
+  assert.deepEqual(names("name", "desc"), ["mid", "beta", "alpha"]);
+});
+
+test("ascending star sort overrides search rank", () => {
+  const items = [
+    row("archify", { stars: 50, desc: "exact" }),
+    row("zz-archify", { stars: 5, desc: "also archify" }),
+  ];
+  const found = filterPlugins(items, { q: "archify", sort: "stars", order: "asc" });
+  assert.deepEqual(found.map((item) => item.name), ["zz-archify", "archify"]);
+});
+
+test("ascending order changes the list key", () => {
+  const desc = new URLSearchParams("sort=stars");
+  const asc = new URLSearchParams("sort=stars&ord=asc");
+  assert.notEqual(catalogListKey(desc), catalogListKey(asc));
+});
