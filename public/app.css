@@ -43,29 +43,29 @@ button, input, select { font: inherit; color: inherit; }
 .brand small { display: none; }
 .brand small, .muted, .foot, .card .desc, .lede, .repo { color: var(--muted); }
 .mark { display: block; width: 32px; height: 32px; flex: none; }
-.nav { display: flex; gap: 4px; margin-left: auto; }
+.nav { display: flex; gap: 4px; margin-left: auto; position: relative; z-index: 1; }
 .top-title {
   display: none;
   margin: 0;
   color: #243044;
   font-size: 16px;
   font-weight: 600;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.04em;
   white-space: nowrap;
 }
-body.is-market .top-title { display: block; }
-.top .fresh {
-  flex: 0 1 auto;
-  max-width: min(420px, 34vw);
-  margin: 0;
-  padding: 0;
-  justify-content: flex-end;
-}
-.top .fresh span {
+body.is-market .top-title {
+  display: block;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 0;
+  max-width: min(640px, 48vw);
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
 }
+#session { position: relative; z-index: 1; }
 .nav a, .btn, .btn-ghost { border-radius: 999px; padding: 8px 14px; }
 .nav a.is-on, .nav a:hover { background: transparent; color: #4d6bfe; }
 .btn, .btn-ghost, .pager button { border: 0; cursor: pointer; }
@@ -898,9 +898,17 @@ body.is-market .top {
   background: rgba(255, 255, 255, 0.78);
   border-bottom: 1px solid rgba(15, 23, 42, 0.06);
 }
-body.is-market .top-title { font-size: 18px; font-weight: 600; letter-spacing: 0.2em; }
+body.is-market .top-title { font-size: 18px; font-weight: 600; letter-spacing: 0.08em; }
 body.is-market .wrap { padding-inline: 36px; }
-body.is-market .fresh { position: static; height: auto; pointer-events: auto; }
+body.is-market .fresh {
+  position: static;
+  height: auto;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  pointer-events: auto;
+  justify-content: center;
+}
 body.is-market #app {
   position: relative;
   z-index: 1;
@@ -1083,9 +1091,19 @@ body.is-market .foot {
   position: relative;
   z-index: 1;
   flex: none;
-  padding: 10px 0 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0 12px;
 }
-body.is-market .foot p { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.is-market .foot p {
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 body.is-market .refs { display: none; }
 @media (max-width: 900px) {
   body.is-market .market { grid-template-columns: 1fr; grid-template-rows: auto minmax(0, 1fr); }
