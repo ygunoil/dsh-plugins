@@ -22,8 +22,8 @@ import {
   replaceItems,
   catalogListKey,
   PUBLISHED,
-} from "./catalog.js?v=20261029zq";
-import { renderReadme } from "./readme.js?v=20261029zq";
+} from "./catalog.js?v=20261030g";
+import { renderReadme } from "./readme.js?v=20261030g";
 import { readPackageJson } from "./zip.js?v=20261027";
 
 const app = document.querySelector("#app");
@@ -296,13 +296,13 @@ function shotUrls(plugin) {
 function cardShot(plugin) {
   const url = shotUrls(plugin)[0];
   if (!url) return "";
-  return `<img class="card-shot" src="${esc(url)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="var card=this.closest('.card');if(card)card.classList.remove('has-shot');this.remove()">`;
+  return `<img class="card-shot" src="${esc(url)}" alt="${esc(`${plugin.name} 截图`)}" title="点击放大" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="var card=this.closest('.card');if(card)card.classList.remove('has-shot');this.remove()">`;
 }
 
 function shotGallery(plugin) {
   const urls = shotUrls(plugin);
   if (!urls.length) return "";
-  const items = urls.map((url, index) => `<a class="shot" href="${esc(url)}" target="_blank" rel="noopener noreferrer"><img src="${esc(url)}" alt="${esc(`${plugin.name} 截图 ${index + 1}`)}" loading="eager" decoding="async" referrerpolicy="no-referrer" onload="this.classList.add('is-in')" onerror="var box=this.parentElement,grid=box&&box.parentElement;if(box)box.remove();if(grid&&!grid.children.length)grid.remove()"></a>`).join("");
+  const items = urls.map((url, index) => `<button type="button" class="shot"><img src="${esc(url)}" alt="${esc(`${plugin.name} 截图 ${index + 1}`)}" loading="eager" decoding="async" referrerpolicy="no-referrer" onload="this.classList.add('is-in')" onerror="var box=this.parentElement,grid=box&&box.parentElement;if(box)box.remove();if(grid&&!grid.children.length)grid.remove()"></button>`).join("");
   return `<div class="shot-grid" aria-label="源站截图">${items}</div>`;
 }
 
@@ -476,16 +476,15 @@ function paintFilters() {
   if (!root) return;
   const levels = [[0, "全部"], [5, "L5"], [4, "L4"], [3, "L3"], [2, "L2"], [1, "L1"]];
   const sorts = [["stars", "Star"], ["level", "等级"], ["downloads", "下载"], ["name", "名称"], ["updated", "更新", "按更新时间"]];
-  const orders = [["desc", "降序", "从新到旧，数值从高到低"], ["asc", "升序", "从旧到新，数值从低到高"]];
   const group = (label, html, title = "") => `<div class="seg-group"><span${title ? ` title="${esc(title)}"` : ""}>${label}</span><div>${html}</div></div>`;
   const sortButtons = sorts.map(([value, label, title]) => segButton("sort", value, label, (state.sort || "stars") === value, title || "")).join("");
-  const orderButtons = orders.map(([value, label, title]) => segButton("order", value, label, (state.order || "desc") === value, title)).join("");
+  const descending = (state.order || "desc") !== "asc";
+  const orderButton = segButton("order", descending ? "asc" : "desc", descending ? "降序" : "升序", true, descending ? "当前降序，点一下改为升序" : "当前升序，点一下改为降序");
   const pubButtons = PUBLISHED.map(([value, label, title]) => segButton("pub", value, label, (state.pub || "") === value, title)).join("");
-  root.innerHTML = [
-    group("等级", levels.map(([value, label]) => segButton("level", value, label, state.level === value)).join("")),
-    group("发布", pubButtons, "只显示来源里记录了发布时间的插件"),
-    group("排序", `${sortButtons}<span class="seg-gap"></span>${orderButtons}`),
-  ].join("");
+  const levelGroup = group("等级", levels.map(([value, label]) => segButton("level", value, label, state.level === value)).join(""));
+  const pubGroup = group("发布", pubButtons, "只显示来源里记录了发布时间的插件");
+  const sortGroup = group("排序", `${sortButtons}${orderButton}`);
+  root.innerHTML = `<div class="filter-row">${levelGroup}${pubGroup}${sortGroup}</div>`;
 }
 
 function fillCategories() {
@@ -552,7 +551,11 @@ function paintResults() {
     : queryLabel
       ? `搜索：${esc(queryLabel)}${catName ? ` · ${esc(catName)}` : ""}　共 ${num(filtered.length)} 条结果`
       : `${catName ? `${esc(catName)} · ` : ""}${num(filtered.length)} 条`;
-  const empty = loading ? "正在载入目录…" : `没有匹配的插件。${filtering ? "可以清除条件后再找。" : ""}`;
+  const empty = loading
+    ? "正在载入目录…"
+    : state.pub
+      ? "这个时间里没有新发布的插件。只有记录了发布时间的才会出现在这里。"
+      : `没有匹配的插件。${filtering ? "可以清除条件后再找。" : ""}`;
   const cancelQ = queryLabel ? `<button type="button" class="text-btn" data-act="clear-q">取消</button>` : "";
   const clear = extra ? `<button type="button" class="text-btn" data-act="reset">清除条件</button>` : "";
   root.innerHTML = `<div class="result-bar"><span>${progress}</span><span class="result-actions">${suggest}${cancelQ}${clear}<span>第 ${num(page)} / ${num(pages)} 页</span></span></div>
@@ -1279,7 +1282,7 @@ async function syncNow() {
   syncing = true;
   setFresh("正在从四个源站同步…", cancelButton());
   try {
-    const { pullLive } = await import("./live.js?v=20261029zq");
+    const { pullLive } = await import("./live.js?v=20261030g");
     const { items, stamps } = await pullLive((message) => setFresh(message, cancelButton()));
     const builtAt = new Date().toISOString();
     replaceItems(items, builtAt);
@@ -1322,7 +1325,7 @@ async function watchSources() {
       ? `构建于 ${day(manifest.builtAt) || "未知"}，已经不是最新。`
       : `构建于 ${day(manifest.builtAt) || "未知"}。源站有变化时可以马上同步。`, button);
   }
-  const { probeSources } = await import("./live.js?v=20261029zq");
+  const { probeSources } = await import("./live.js?v=20261030g");
   const changed = await probeSources(manifest.upstream);
   if (syncing) return;
   if (changed.length) setFresh(`源站有更新：${changed.join("、")}。`, syncButton("立即同步"));
@@ -1412,7 +1415,146 @@ document.addEventListener("pointerdown", (event) => {
   if (input) input.setAttribute("aria-expanded", "false");
 });
 
+const zoom = { open: false, images: [], index: 0, scale: 1, x: 0, y: 0, drag: null };
+
+function zoomSrc(img) {
+  const src = img?.currentSrc || img?.src || "";
+  return /^https?:/i.test(src) ? src : "";
+}
+
+function zoomList(img) {
+  const grid = img.closest(".shot-grid, .readme");
+  const nodes = grid ? [...grid.querySelectorAll("img")] : [img];
+  return nodes.filter((node) => zoomSrc(node));
+}
+
+function ensureZoom() {
+  let root = document.getElementById("zoom");
+  if (root) return root;
+  root = document.createElement("div");
+  root.id = "zoom";
+  root.className = "zoom";
+  root.hidden = true;
+  root.innerHTML = `<button type="button" class="zoom-x" data-zoom="close" aria-label="关闭">×</button>
+    <button type="button" class="zoom-step is-prev" data-zoom="prev" aria-label="上一张">‹</button>
+    <button type="button" class="zoom-step is-next" data-zoom="next" aria-label="下一张">›</button>
+    <div class="zoom-stage" data-zoom="close"><img alt="" draggable="false"></div>
+    <div class="zoom-bar">
+      <button type="button" data-zoom="out" aria-label="缩小">－</button>
+      <span data-zoom-level>100%</span>
+      <button type="button" data-zoom="in" aria-label="放大">＋</button>
+    </div>`;
+  document.body.appendChild(root);
+  root.dataset.zoom = "close";
+  root.querySelector(".zoom-bar").dataset.zoom = "stay";
+  const photo = root.querySelector("img");
+  photo.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setZoom(zoom.scale >= 2.5 ? 1 : zoom.scale + 0.5);
+  });
+  root.addEventListener("wheel", (event) => {
+    if (!zoom.open) return;
+    event.preventDefault();
+    setZoom(zoom.scale + (event.deltaY < 0 ? 0.2 : -0.2));
+  }, { passive: false });
+  photo.addEventListener("pointerdown", (event) => {
+    if (zoom.scale <= 1) return;
+    zoom.drag = { id: event.pointerId, x: event.clientX, y: event.clientY, ox: zoom.x, oy: zoom.y };
+    photo.setPointerCapture(event.pointerId);
+  });
+  photo.addEventListener("pointermove", (event) => {
+    if (!zoom.drag || zoom.drag.id !== event.pointerId) return;
+    zoom.x = zoom.drag.ox + event.clientX - zoom.drag.x;
+    zoom.y = zoom.drag.oy + event.clientY - zoom.drag.y;
+    applyZoom();
+  });
+  const endDrag = () => { zoom.drag = null; };
+  photo.addEventListener("pointerup", endDrag);
+  photo.addEventListener("pointercancel", endDrag);
+  return root;
+}
+
+function applyZoom() {
+  const root = document.getElementById("zoom");
+  if (!root) return;
+  const photo = root.querySelector("img");
+  photo.style.transform = `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.scale})`;
+  root.classList.toggle("is-big", zoom.scale > 1);
+  const level = root.querySelector("[data-zoom-level]");
+  if (level) level.textContent = `${Math.round(zoom.scale * 100)}%`;
+}
+
+function setZoom(value) {
+  const next = Math.min(4, Math.max(1, Math.round(value * 100) / 100));
+  zoom.scale = next;
+  if (next === 1) {
+    zoom.x = 0;
+    zoom.y = 0;
+  }
+  applyZoom();
+}
+
+function showZoom() {
+  const root = ensureZoom();
+  const photo = root.querySelector("img");
+  const current = zoom.images[zoom.index];
+  photo.src = zoomSrc(current);
+  photo.alt = current.alt || "放大图片";
+  root.hidden = false;
+  root.querySelector("[data-zoom='prev']").hidden = zoom.images.length < 2;
+  root.querySelector("[data-zoom='next']").hidden = zoom.images.length < 2;
+  applyZoom();
+}
+
+function openZoom(img) {
+  const images = zoomList(img);
+  const index = Math.max(0, images.indexOf(img));
+  if (!images.length) return;
+  zoom.open = true;
+  zoom.images = images;
+  zoom.index = index;
+  zoom.scale = 1;
+  zoom.x = 0;
+  zoom.y = 0;
+  showZoom();
+}
+
+function closeZoom() {
+  zoom.open = false;
+  zoom.drag = null;
+  const root = document.getElementById("zoom");
+  if (root) root.hidden = true;
+}
+
+function stepZoom(delta) {
+  if (zoom.images.length < 2) return;
+  zoom.index = (zoom.index + delta + zoom.images.length) % zoom.images.length;
+  zoom.scale = 1;
+  zoom.x = 0;
+  zoom.y = 0;
+  showZoom();
+}
+
 document.body.addEventListener("click", async (event) => {
+  const zoomAct = event.target.closest("[data-zoom]");
+  if (zoomAct && zoom.open && document.getElementById("zoom")?.contains(zoomAct)) {
+    event.preventDefault();
+    const act = zoomAct.dataset.zoom;
+    if (act === "stay") return;
+    if (act === "close") closeZoom();
+    else if (act === "in") setZoom(zoom.scale + 0.5);
+    else if (act === "out") setZoom(zoom.scale - 0.5);
+    else if (act === "prev") stepZoom(-1);
+    else if (act === "next") stepZoom(1);
+    return;
+  }
+  const photo = event.target.closest(".card-shot, .shot img, .readme img");
+  if (photo && zoomSrc(photo)) {
+    event.preventDefault();
+    event.stopPropagation();
+    openZoom(photo);
+    return;
+  }
   const button = event.target.closest("[data-act]");
   if (!button || button.disabled) return;
   const act = button.dataset.act;
@@ -1494,7 +1636,7 @@ document.body.addEventListener("click", async (event) => {
   }
   if (act === "cancel-sync") {
     event.preventDefault();
-    const { cancelPull } = await import("./live.js?v=20261029zq");
+    const { cancelPull } = await import("./live.js?v=20261030g");
     cancelPull();
   }
   if (act === "copy") {
@@ -1625,6 +1767,16 @@ window.addEventListener("resize", () => {
   }, 140);
 });
 window.addEventListener("keydown", (event) => {
+  if (zoom.open) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeZoom();
+    } else if (event.key === "ArrowLeft") stepZoom(-1);
+    else if (event.key === "ArrowRight") stepZoom(1);
+    else if (event.key === "+" || event.key === "=") setZoom(zoom.scale + 0.5);
+    else if (event.key === "-") setZoom(zoom.scale - 0.5);
+    return;
+  }
   if (event.key === "Escape" && readRoute().path.startsWith("/plugin")) {
     if (/input|textarea|select/i.test(event.target.tagName)) return;
     event.preventDefault();

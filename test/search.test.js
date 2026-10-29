@@ -120,6 +120,13 @@ test("publish filter keeps only plugins inside the window", () => {
   assert.deepEqual(names(""), ["today", "week", "old", "unknown"]);
 });
 
+test("yesterday morning still counts as the last day", () => {
+  const now = Date.parse("2026-10-29T08:43:00Z");
+  const published = Math.floor(Date.parse("2026-10-28T02:31:23Z") / 1000);
+  const items = [Object.assign(row("yesterday", { stars: 1 }), { published })];
+  assert.deepEqual(filterPlugins(items, { pub: "1d", now }).map((item) => item.name), ["yesterday"]);
+});
+
 test("publish filter changes the list key", () => {
   const open = new URLSearchParams("pub=7d");
   const plain = new URLSearchParams();

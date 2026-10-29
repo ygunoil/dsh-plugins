@@ -193,21 +193,27 @@ export function getById(id) {
 
 export const PUBLISHED = [
   ["", "全部", "不限发布时间"],
-  ["1d", "1天", "最近 1 天发布"],
-  ["3d", "3天", "最近 3 天发布"],
-  ["7d", "1周", "最近 1 周发布"],
+  ["1d", "1天", "昨天 0 点（北京时间）至今发布"],
+  ["3d", "3天", "3 天前 0 点至今发布"],
+  ["7d", "1周", "7 天前 0 点至今发布"],
   ["30d", "1月", "最近 1 个月发布"],
   ["90d", "3月", "最近 3 个月发布"],
   ["180d", "半年", "最近半年发布"],
   ["365d", "1年", "最近 1 年发布"],
 ];
 
+const DAY = 86400;
+const SHANGHAI = 8 * 3600;
+
 export function publishedCutoff(key, now = Date.now()) {
+  const days = { "1d": 1, "3d": 3, "7d": 7 }[key];
+  if (days) {
+    const nowSec = Math.floor(now / 1000);
+    const startToday = Math.floor((nowSec + SHANGHAI) / DAY) * DAY - SHANGHAI;
+    return startToday - days * DAY;
+  }
   const date = new Date(now);
-  if (key === "1d") date.setDate(date.getDate() - 1);
-  else if (key === "3d") date.setDate(date.getDate() - 3);
-  else if (key === "7d") date.setDate(date.getDate() - 7);
-  else if (key === "30d") date.setMonth(date.getMonth() - 1);
+  if (key === "30d") date.setMonth(date.getMonth() - 1);
   else if (key === "90d") date.setMonth(date.getMonth() - 3);
   else if (key === "180d") date.setMonth(date.getMonth() - 6);
   else if (key === "365d") date.setFullYear(date.getFullYear() - 1);
