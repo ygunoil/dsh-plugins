@@ -22,8 +22,8 @@ import {
   replaceItems,
   catalogListKey,
   PUBLISHED,
-} from "./catalog.js?v=20261029zp";
-import { renderReadme } from "./readme.js?v=20261029zp";
+} from "./catalog.js?v=20261029zq";
+import { renderReadme } from "./readme.js?v=20261029zq";
 import { readPackageJson } from "./zip.js?v=20261027";
 
 const app = document.querySelector("#app");
@@ -753,13 +753,11 @@ function factRow(plugin) {
     ["分类", cat],
     ["等级", plugin.level ? `L${plugin.level}` : "—", plugin.level ? "dsh.so 的标注，本站没有复验" : ""],
     ["风险", plugin.risk ? (RISK[plugin.risk] || "—") : "—"],
-    ["语言", plugin.lang || "—"],
     ["版本", shownVersion(plugin) || "—"],
     ["发布", stampDay(plugin.published) || "—", plugin.published ? "来源记录的发布时间" : ""],
     ["更新", stampDay(plugin.updated) || "—", plugin.updated ? "来源记录的更新时间" : ""],
     ["Star", plugin.stars ? compact(plugin.stars) : "—", plugin.stars ? num(plugin.stars) : "", "fact-star"],
     ["下载", plugin.downloads ? compact(plugin.downloads) : "—", plugin.downloads ? num(plugin.downloads) : ""],
-    ["状态", plugin.health ? (HEALTH[plugin.health] || "异常") : (plugin.repo ? "未见异常" : "—"), "", "", Boolean(plugin.health)],
   ];
   return `<dl class="fact-row">${items.map(([label, value, title, id, bad]) => `<div><dt>${esc(label)}</dt><dd${id ? ` id="${id}"` : ""}${title ? ` title="${esc(title)}"` : ""}${bad ? ` class="is-bad"` : ""}>${esc(value)}</dd></div>`).join("")}</dl>`;
 }
@@ -868,7 +866,6 @@ function pluginHtml(plugin) {
           <div class="stat"><b id="live-star">${plugin.stars ? esc(compact(plugin.stars)) : "—"}</b><span>Star</span></div>
           <div class="stat"><b>${plugin.downloads ? esc(compact(plugin.downloads)) : "—"}</b><span>下载</span></div>
           <div class="stat"><b>${esc(shownVersion(plugin) || "—")}</b><span>版本</span></div>
-          <div class="stat"><b>${esc(plugin.lang || "—")}</b><span>语言</span></div>
         </div>
         ${relatedHtml(plugin)}
         <h2 class="side-title">收录来源</h2>
@@ -1282,7 +1279,7 @@ async function syncNow() {
   syncing = true;
   setFresh("正在从四个源站同步…", cancelButton());
   try {
-    const { pullLive } = await import("./live.js?v=20261029zp");
+    const { pullLive } = await import("./live.js?v=20261029zq");
     const { items, stamps } = await pullLive((message) => setFresh(message, cancelButton()));
     const builtAt = new Date().toISOString();
     replaceItems(items, builtAt);
@@ -1325,7 +1322,7 @@ async function watchSources() {
       ? `构建于 ${day(manifest.builtAt) || "未知"}，已经不是最新。`
       : `构建于 ${day(manifest.builtAt) || "未知"}。源站有变化时可以马上同步。`, button);
   }
-  const { probeSources } = await import("./live.js?v=20261029zp");
+  const { probeSources } = await import("./live.js?v=20261029zq");
   const changed = await probeSources(manifest.upstream);
   if (syncing) return;
   if (changed.length) setFresh(`源站有更新：${changed.join("、")}。`, syncButton("立即同步"));
@@ -1497,7 +1494,7 @@ document.body.addEventListener("click", async (event) => {
   }
   if (act === "cancel-sync") {
     event.preventDefault();
-    const { cancelPull } = await import("./live.js?v=20261029zp");
+    const { cancelPull } = await import("./live.js?v=20261029zq");
     cancelPull();
   }
   if (act === "copy") {
