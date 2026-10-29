@@ -480,7 +480,17 @@ function paintTotal() {
   if (!slot) return;
   const total = getManifest()?.total || 0;
   slot.hidden = !total;
-  slot.textContent = total ? `共 ${num(total)}` : "";
+  if (!total) {
+    slot.innerHTML = "";
+    return;
+  }
+  const formatted = num(total);
+  const marks = [...formatted].map((ch) => {
+    if (/\d/.test(ch)) return `<span class="find-digit">${esc(ch)}</span>`;
+    const sep = ch.trim() || ",";
+    return `<span class="find-sep" aria-hidden="true">${esc(sep)}</span>`;
+  }).join("");
+  slot.innerHTML = `<span class="find-label">共</span><span class="find-digits" aria-label="共 ${esc(formatted)}">${marks}</span>`;
 }
 
 function paintResults() {
