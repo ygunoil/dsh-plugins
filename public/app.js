@@ -258,7 +258,8 @@ function installRows(install) {
 }
 
 function cardMetric(value, kind, label) {
-  const text = value == null || value === "" ? "—" : compact(value);
+  if (value == null || value === "") return "";
+  const text = compact(value);
   const icon = kind === "star"
     ? `<svg class="metric-icon" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 1.2 9.9 5.4l4.6.4-3.5 3 .9 4.5L8 11.2 4.1 13.3l.9-4.5-3.5-3 4.6-.4L8 1.2z"/></svg>`
     : `<svg class="metric-icon" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M7.2 1.5h1.6v6.1l2.1-2.1 1.1 1.1L8 11.6 3.9 6.6l1.1-1.1 2.2 2.1V1.5zM2.8 12.4h10.4V14H2.8v-1.6z"/></svg>`;
