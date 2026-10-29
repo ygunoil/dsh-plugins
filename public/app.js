@@ -257,9 +257,12 @@ function installRows(install) {
   }).join("")}</div>`;
 }
 
-function cardMetric(value, label) {
+function cardMetric(value, kind, label) {
   const text = value == null || value === "" ? "—" : compact(value);
-  return `<span class="card-metric"><b>${esc(text)}</b><small>${label}</small></span>`;
+  const icon = kind === "star"
+    ? `<svg class="metric-icon" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M8 1.2 9.9 5.4l4.6.4-3.5 3 .9 4.5L8 11.2 4.1 13.3l.9-4.5-3.5-3 4.6-.4L8 1.2z"/></svg>`
+    : `<svg class="metric-icon" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M7.2 1.5h1.6v6.1l2.1-2.1 1.1 1.1L8 11.6 3.9 6.6l1.1-1.1 2.2 2.1V1.5zM2.8 12.4h10.4V14H2.8v-1.6z"/></svg>`;
+  return `<span class="card-metric" title="${esc(label)}">${icon}<b>${esc(text)}</b></span>`;
 }
 
 function pluginIcon(plugin, large = false) {
@@ -277,7 +280,7 @@ function card(plugin) {
     : "";
   return `<article class="card${plugin.health === 1 ? " is-dead" : ""}">
     <a class="card-main" href="${esc(pluginHref(plugin.id))}">
-      <header>${pluginIcon(plugin)}<h3>${hi(plugin.name)}</h3><span class="card-metrics">${cardMetric(plugin.stars, "Star")}${cardMetric(plugin.downloads, "下载")}</span></header>
+      <header>${pluginIcon(plugin)}<h3>${hi(plugin.name)}</h3><span class="card-metrics">${cardMetric(plugin.stars, "star", "Star")}${cardMetric(plugin.downloads, "down", "下载")}</span></header>
       ${repo ? `<p class="repo">${hi(repo)}</p>` : ""}
       <p class="desc">${hi(plugin.desc || "暂无简介")}</p>
       <footer>${cat}${levelChip(plugin)}${riskChip(plugin)}${health}${local}<span class="view">查看</span></footer>
