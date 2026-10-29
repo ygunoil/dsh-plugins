@@ -39,7 +39,7 @@ button, input, select { font: inherit; color: inherit; }
   backdrop-filter: blur(16px);
 }
 .brand { display: flex; align-items: center; gap: 10px; min-width: max-content; }
-.brand strong { display: block; font-size: 16px; color: #4d6bfe; font-weight: 650; }
+.brand strong { display: block; font-size: 16px; color: #4d6bfe; font-weight: 600; }
 .brand small { display: none; }
 .brand small, .muted, .foot, .card .desc, .lede, .repo { color: var(--muted); }
 .mark { display: block; width: 32px; height: 32px; flex: none; }
@@ -491,7 +491,7 @@ h2 { margin: 0 0 12px; font-size: 18px; }
   color: #d7e0ff;
   font-style: normal;
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 600;
 }
 .rank.is-1 { background: #6a5420; color: #ffe7a3; }
 .rank.is-2 { background: #465066; color: #e7eefc; }
@@ -776,16 +776,12 @@ mark { background: rgba(77, 107, 254, 0.16); color: inherit; border-radius: 4px;
 .repo-live { margin: 14px 0; }
 .readme-toggle { margin-top: 8px; }
 .readme {
-  display: grid;
-  gap: 8px;
   max-width: 100%;
-  padding: 12px 12px 14px;
-  border-radius: 16px;
-  border: 1px solid var(--line);
-  background: #f8fafc;
-  color: var(--ink);
-  font-size: 13px;
-  line-height: 1.6;
+  margin-top: 4px;
+  color: #1e293b;
+  font-size: 15px;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
 }
 .readme.is-clipped { position: relative; max-height: 720px; overflow: hidden; }
 .readme.is-clipped::after {
@@ -798,24 +794,72 @@ mark { background: rgba(77, 107, 254, 0.16); color: inherit; border-radius: 4px;
   background: linear-gradient(transparent, #fff);
   pointer-events: none;
 }
-.readme h3, .readme h4, .readme h5 { margin: 6px 0 0; font-size: 15px; }
-.readme p, .readme ul { margin: 0; }
-.readme ul { padding-left: 18px; }
-.readme a { color: var(--blue-2); }
-.readme-more summary { cursor: pointer; color: var(--blue-2); }
-.readme-note { display: grid; gap: 6px; padding: 8px 10px; border-radius: 12px; border: 1px solid rgba(77, 107, 254, 0.35); background: rgba(77, 107, 254, 0.1); }
-.readme code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
-.readme-code {
-  overflow: auto;
-  margin: 0;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: #f4f7fb;
-  white-space: pre-wrap;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-  line-height: 1.45;
+.readme > :first-child { margin-top: 0; }
+.readme h2, .readme h3, .readme h4, .readme h5, .readme h6 {
+  margin: 1.15em 0 0.4em;
+  color: #0f172a;
+  letter-spacing: -0.03em;
+  line-height: 1.35;
 }
+.readme h2 { font-size: 22px; }
+.readme h3 { font-size: 18px; }
+.readme h4, .readme h5, .readme h6 { font-size: 15px; }
+.readme p { margin: 0.65em 0; }
+.readme ul, .readme ol { margin: 0.4em 0 0.85em; padding-left: 1.3em; }
+.readme li + li { margin-top: 0.28em; }
+.readme li > ul, .readme li > ol { margin: 0.25em 0 0.35em; }
+.readme a { color: var(--blue-2); text-underline-offset: 2px; }
+.readme a:hover { text-decoration: underline; }
+.readme code {
+  padding: 0.1em 0.38em;
+  border-radius: 6px;
+  background: rgba(77, 107, 254, 0.08);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.88em;
+}
+.readme pre {
+  overflow: auto;
+  margin: 0.85em 0 1em;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #f4f7fb;
+}
+.readme pre code {
+  padding: 0;
+  background: transparent;
+  font-size: 12.5px;
+  line-height: 1.55;
+  white-space: pre;
+}
+.readme img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0.85em 0;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+}
+.readme .md-table { overflow: auto; margin: 0.85em 0 1em; }
+.readme table { width: max-content; max-width: 100%; border-collapse: collapse; font-size: 13.5px; line-height: 1.5; }
+.readme th, .readme td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+.readme th { color: #64748b; font-size: 12px; font-weight: 600; }
+.readme blockquote {
+  margin: 0.85em 0;
+  padding: 8px 14px;
+  border-left: 3px solid #4d6bfe;
+  border-radius: 0 12px 12px 0;
+  background: rgba(77, 107, 254, 0.06);
+  color: #334155;
+}
+.readme .md-alert.is-tip { border-left-color: #0f9f6e; background: rgba(15, 159, 110, 0.08); }
+.readme .md-alert.is-important { border-left-color: #7c3aed; background: rgba(124, 58, 237, 0.08); }
+.readme .md-alert.is-warning { border-left-color: #d97706; background: rgba(217, 119, 6, 0.1); }
+.readme .md-alert.is-caution { border-left-color: #e11d48; background: rgba(225, 29, 72, 0.08); }
+.readme hr { margin: 1.2em 0; border: 0; border-top: 1px solid var(--line); }
+.readme li:has(> input) { list-style: none; margin-left: -1.2em; }
+.readme input[type="checkbox"] { margin-right: 6px; accent-color: #4d6bfe; }
 .stars { color: var(--blue-2); font-style: normal; white-space: nowrap; font-size: 13px; }
 .card-metrics { display: flex; gap: 10px; flex: none; align-items: baseline; margin-left: 8px; }
 .card-icon { width: 22px; height: 22px; flex: none; border-radius: 6px; object-fit: cover; background: #f4f7fb; }

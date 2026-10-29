@@ -12,5 +12,8 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "dependencies": {
+    "marked": "^15.0.12"
   }
 }

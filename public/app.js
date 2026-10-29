@@ -22,7 +22,8 @@ import {
   replaceItems,
   catalogListKey,
   PUBLISHED,
-} from "./catalog.js?v=20261029zn";
+} from "./catalog.js?v=20261029zo";
+import { renderReadme } from "./readme.js?v=20261029zo";
 import { readPackageJson } from "./zip.js?v=20261027";
 
 const app = document.querySelector("#app");
@@ -1162,119 +1163,6 @@ function installGuide(plugin) {
 }
 
 
-function readmeHref(url, repoUrl) {
-  const raw = String(url || "").trim();
-  if (!raw || raw.startsWith("#") || /^javascript:/i.test(raw)) return "";
-  if (/^https?:\/\//i.test(raw)) return safeUrl(raw);
-  if (!repoUrl || raw.includes("..")) return "";
-  const hashAt = raw.indexOf("#");
-  const hash = hashAt === -1 ? "" : raw.slice(hashAt);
-  const path = (hashAt === -1 ? raw : raw.slice(0, hashAt)).replace(/^\.\//, "").replace(/^\/+/, "");
-  if (!path) return "";
-  return safeUrl(`${repoUrl}/blob/HEAD/${path}${hash}`);
-}
-
-function inlineReadme(text, repoUrl) {
-  const re = /(`[^`]+`)|!\[([^\]]*)\]\(([^)\s]+)\)|\[([^\]]+)\]\(([^)\s]+)\)|\*\*([^*]+)\*\*/g;
-  let html = "";
-  let last = 0;
-  for (const match of text.matchAll(re)) {
-    html += esc(text.slice(last, match.index));
-    if (match[1]) html += `<code>${esc(match[1].slice(1, -1))}</code>`;
-    else if (match[3] && match[2] != null && !match[4]) html += "";
-    else if (match[5]) {
-      const url = readmeHref(match[5], repoUrl);
-      html += url ? `<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(match[4])}</a>` : esc(match[4]);
-    } else if (match[6]) html += `<strong>${inlineReadme(match[6], repoUrl)}</strong>`;
-    last = match.index + match[0].length;
-  }
-  html += esc(text.slice(last));
-  return html;
-}
-
-function readableSource(raw) {
-  let text = String(raw || "").replace(/\r\n/g, "\n");
-  if (!/<\/?[a-z][\s\S]*?>/i.test(text)) return text;
-  text = text
-    .replace(/<script[\s\S]*?<\/script>/gi, "")
-    .replace(/<style[\s\S]*?<\/style>/gi, "")
-    .replace(/<a\s+[^>]*href="https?:\/\/[^"]+"[^>]*>\s*<img\b[\s\S]*?<\/a>/gi, "")
-    .replace(/<img\b[^>]*>/gi, "")
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<h([1-3])[^>]*>/gi, (_, level) => `\n${"#".repeat(Number(level))} `)
-    .replace(/<li[^>]*>/gi, "\n- ")
-    .replace(/<a\s+[^>]*href="(https?:\/\/[^"]+)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href, label) => {
-      const name = label.replace(/<[^>]+>/g, "").trim();
-      return name ? `[${name}](${href})` : "";
-    })
-    .replace(/<\/?code[^>]*>/gi, "")
-    .replace(/<\/(p|div|h[1-6]|li|tr|pre|blockquote)>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'");
-  return text;
-}
-
-function stripBadges(text) {
-  let out = text;
-  let prev = "";
-  const badge = /\[!\[[^\]]*\]\([^)\n]*\)\]\([^)\n]*\)|!\[[^\]]*\]\([^)\n]*\)/g;
-  while (out !== prev) {
-    prev = out;
-    badge.lastIndex = 0;
-    out = out.replace(badge, "");
-  }
-  return out.replace(/\[\]\([^)\n]*\)/g, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n");
-}
-
-function isLinkDump(lines) {
-  const raw = lines.join("\n");
-  const links = raw.match(/\]\(/g) || [];
-  if (links.length < 4) return false;
-  const rest = raw.replace(/\[[^\]]+\]\([^)]+\)/g, "").replace(/[\s·|*#\-_*]/g, "");
-  return rest.length < 16;
-}
-
-function linkDumpTitle(lines) {
-  const hrefs = [...lines.join("\n").matchAll(/\]\(([^)]+)\)/g)].map((match) => match[1]);
-  return hrefs.length && hrefs.every((href) => href.startsWith("#")) ? "本页目录" : "更多链接";
-}
-
-function renderReadme(raw, repoUrl) {
-  const text = stripBadges(readableSource(raw)).slice(0, 14000);
-  const blocks = text.split("```");
-  return blocks.map((block, index) => {
-    if (index % 2 === 1) {
-      const nl = block.indexOf("\n");
-      const code = nl === -1 ? block : block.slice(nl + 1);
-      return `<pre class="readme-code">${esc(code.replace(/\n$/, ""))}</pre>`;
-    }
-    return block.split(/\n{2,}/).map((para) => {
-      const lines = para.split("\n").filter((line) => line.trim());
-      if (!lines.length) return "";
-      if (isLinkDump(lines)) {
-        return `<details class="readme-more"><summary>${linkDumpTitle(lines)}</summary><p>${inlineReadme(lines.join(" "), repoUrl)}</p></details>`;
-      }
-      if (lines.every((line) => /^>\s?/.test(line))) {
-        const body = lines
-          .map((line) => line.replace(/^>\s?/, "").replace(/^\[!(IMPORTANT|NOTE|WARNING|TIP)\]\s*/, ""))
-          .filter(Boolean);
-        return `<div class="readme-note">${body.map((line) => `<p>${inlineReadme(line, repoUrl)}</p>`).join("")}</div>`;
-      }
-      const heading = lines.length === 1 ? lines[0].match(/^(#{1,3})\s+(.+)$/) : null;
-      if (heading) return `<h${heading[1].length + 2}>${inlineReadme(heading[2], repoUrl)}</h${heading[1].length + 2}>`;
-      if (lines.every((line) => /^\s*[-*]\s+/.test(line))) {
-        return `<ul>${lines.map((line) => `<li>${inlineReadme(line.replace(/^\s*[-*]\s+/, ""), repoUrl)}</li>`).join("")}</ul>`;
-      }
-      return `<p>${lines.map((line) => inlineReadme(line, repoUrl)).join("<br>")}</p>`;
-    }).join("");
-  }).join("");
-}
-
 function remoteFacts(slot, data) {
   const catalog = slot.dataset.desc || "";
   const about = data.about && !catalog.includes(String(data.about).slice(0, 48))
@@ -1321,7 +1209,7 @@ async function loadRemote(plugin) {
   const repoUrl = githubUrl(plugin.repo);
   if (!slot || !repoUrl) return;
   const mine = ++remoteToken;
-  const cacheKey = `dsh-repo:5:${plugin.repo}`;
+  const cacheKey = `dsh-repo:6:${plugin.repo}`;
   try {
     const cached = JSON.parse(sessionStorage.getItem(cacheKey) || "null");
     if (cached && Date.now() - cached.at < 10 * 60 * 1000) {
@@ -1347,7 +1235,7 @@ async function loadRemote(plugin) {
       return;
     }
     const repo = repoResponse.ok ? await repoResponse.json() : null;
-    const readme = readmeResponse.ok ? readableSource(await readmeResponse.text()).slice(0, 14000) : "";
+    const readme = readmeResponse.ok ? (await readmeResponse.text()).slice(0, 20000) : "";
     const license = repo?.license?.spdx_id && repo.license.spdx_id !== "NOASSERTION"
       ? repo.license.spdx_id
       : (repo?.license?.name || "");
@@ -1394,7 +1282,7 @@ async function syncNow() {
   syncing = true;
   setFresh("正在从四个源站同步…", cancelButton());
   try {
-    const { pullLive } = await import("./live.js?v=20261029zn");
+    const { pullLive } = await import("./live.js?v=20261029zo");
     const { items, stamps } = await pullLive((message) => setFresh(message, cancelButton()));
     const builtAt = new Date().toISOString();
     replaceItems(items, builtAt);
@@ -1437,7 +1325,7 @@ async function watchSources() {
       ? `构建于 ${day(manifest.builtAt) || "未知"}，已经不是最新。`
       : `构建于 ${day(manifest.builtAt) || "未知"}。源站有变化时可以马上同步。`, button);
   }
-  const { probeSources } = await import("./live.js?v=20261029zn");
+  const { probeSources } = await import("./live.js?v=20261029zo");
   const changed = await probeSources(manifest.upstream);
   if (syncing) return;
   if (changed.length) setFresh(`源站有更新：${changed.join("、")}。`, syncButton("立即同步"));
@@ -1609,7 +1497,7 @@ document.body.addEventListener("click", async (event) => {
   }
   if (act === "cancel-sync") {
     event.preventDefault();
-    const { cancelPull } = await import("./live.js?v=20261029zn");
+    const { cancelPull } = await import("./live.js?v=20261029zo");
     cancelPull();
   }
   if (act === "copy") {
