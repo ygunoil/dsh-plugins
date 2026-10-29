@@ -16,6 +16,8 @@ export const FIELDS = [
   "lang",
   "dsh",
   "page",
+  "updated",
+  "published",
 ];
 
 export const SOURCE = {
@@ -133,7 +135,10 @@ function blank() {
     lang: null,
     dshId: null,
     page: null,
+    icon: null,
     sub: false,
+    updated: 0,
+    published: 0,
   };
 }
 
@@ -167,7 +172,10 @@ function absorb(base, extra) {
   if (!base.lang && extra.lang) base.lang = extra.lang;
   if (!base.dshId && extra.dshId) base.dshId = extra.dshId;
   if (!base.page && extra.page) base.page = extra.page;
+  if (!base.icon && extra.icon) base.icon = extra.icon;
   if (extra.sub) base.sub = true;
+  if (extra.updated) base.updated = Math.max(base.updated || 0, extra.updated);
+  if (extra.published) base.published = base.published ? Math.min(base.published, extra.published) : extra.published;
 }
 
 class UnionFind {
@@ -239,6 +247,9 @@ function finalize(record, index) {
     lang: record.lang || null,
     dsh: record.dshId ? `https://www.dsh.so/artifact/${encodeURIComponent(record.dshId)}/` : null,
     page: safePage(record.page),
+    icon: record.icon || null,
+    updated: record.updated || null,
+    published: record.published || null,
   };
 }
 

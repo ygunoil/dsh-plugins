@@ -1,5 +1,5 @@
 {
-  "builtAt": "2026-10-26T10:44:27.582Z",
+  "builtAt": "2026-10-29T06:46:23.446Z",
   "total": 26237,
   "fields": [
     "id",
@@ -18,7 +18,9 @@
     "downloads",
     "lang",
     "dsh",
-    "page"
+    "page",
+    "updated",
+    "published"
   ],
   "shards": [
     "data/shard-00.json",
@@ -54,7 +56,9 @@
       null,
       "TypeScript",
       "https://www.dsh.so/artifact/rea/",
-      null
+      null,
+      1792990210,
+      1776127892
     ],
     [
       "r~deepseek-ai~deepseek-harness",
@@ -73,7 +77,9 @@
       null,
       "TypeScript",
       "https://www.dsh.so/artifact/deepseek-harness/",
-      null
+      null,
+      1792990105,
+      1786622192
     ],
     [
       "r~nexu-io~open-design",
@@ -92,7 +98,9 @@
       null,
       "TypeScript",
       "https://www.dsh.so/artifact/open-design/",
-      null
+      null,
+      1792990063,
+      1777350320
     ],
     [
       "r~tt-a1i~archify",
@@ -111,7 +119,9 @@
       30169,
       "JavaScript",
       "https://www.dsh.so/artifact/archify/",
-      "https://awesome-dsh-plugin.com/p/tt-a1i/archify--integrations-deepseek-harness/"
+      "https://awesome-dsh-plugin.com/p/tt-a1i/archify--integrations-deepseek-harness/",
+      1792990213,
+      1776230857
     ],
     [
       "r~ruvnet~ruflo",
@@ -130,7 +140,9 @@
       null,
       "TypeScript",
       "https://www.dsh.so/artifact/ruflo/",
-      null
+      null,
+      1792989181,
+      1748899460
     ],
     [
       "r~mem0ai~mem0",
@@ -149,6 +161,8 @@
       null,
       null,
       "https://www.dsh.so/artifact/mem0/",
+      null,
+      null,
       null
     ],
     [
@@ -168,6 +182,8 @@
       null,
       null,
       "https://www.dsh.so/artifact/mempalace/",
+      null,
+      null,
       null
     ],
     [
@@ -187,7 +203,9 @@
       51647,
       null,
       null,
-      "https://awesome-dsh-plugin.com/p/vectorize-io/hindsight--hindsight-integrations-coding-agents/"
+      "https://awesome-dsh-plugin.com/p/vectorize-io/hindsight--hindsight-integrations-coding-agents/",
+      1792428175,
+      1792428175
     ]
   ],
   "categories": [
@@ -393,6 +411,9 @@
   },
   "upstream": {
     "dshso": {
+      "etag": "W/\"1cf35f587b72ac00717966ec410bbe7d\"",
+      "bytes": null,
+      "modified": "Thu, 29 Oct 2026 06:19:36 GMT",
       "generatedAt": "2026-10-26T00:14:18.434Z",
       "license": "CC-BY-4.0",
       "attribution": "dsh.so — DSH Developer Hub (https://www.dsh.so)",
@@ -400,16 +421,25 @@
       "source": "https://www.dsh.so/artifacts/"
     },
     "awesome": {
+      "etag": "W/\"6ae2cbdf-943492\"",
+      "bytes": 2348301,
+      "modified": "Thu, 29 Oct 2026 04:30:23 GMT",
       "updated": "2026-10-25",
       "license": "CC0-1.0",
       "url": "https://awesome-dsh-plugin.com",
       "source": "https://github.com/awesome-dsh-plugin/awesome-dsh-plugin"
     },
     "market": {
+      "etag": "W/\"6ae1c77f-2e72f4\"",
+      "bytes": 906198,
+      "modified": "Wed, 28 Oct 2026 09:59:27 GMT",
       "format": 1,
       "url": "https://dshmarket.com/"
     },
     "workshop": {
+      "etag": "W/\"6ae2def5-6b318\"",
+      "bytes": 153443,
+      "modified": "Thu, 29 Oct 2026 05:51:49 GMT",
       "fetchedAt": "2026-10-26T04:50:39Z",
       "total": 1000,
       "source": "https://github.com/topics/dsh-plugin",

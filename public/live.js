@@ -27,8 +27,8 @@ export async function pullLive(onStatus) {
   controller?.abort();
   controller = new AbortController();
   const { signal } = controller;
-  const { mergeRecords } = await import("./engine/merge.js?v=20261028d");
-  const { fromDsh, fromAwesome, fromMarket, fromWorkshop } = await import("./engine/sources.js?v=20261028d");
+  const { mergeRecords } = await import("./engine/merge.js?v=20261029zk");
+  const { fromDsh, fromAwesome, fromMarket, fromWorkshop } = await import("./engine/sources.js?v=20261029zk");
   const make = { dshso: fromDsh, awesome: fromAwesome, market: fromMarket, workshop: fromWorkshop };
   onStatus?.("正在同时读取四个源站…");
   const loaded = await Promise.all(SOURCES.map(async ([key, url, label]) => {

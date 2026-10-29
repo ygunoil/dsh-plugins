@@ -89,3 +89,39 @@ test("ascending order changes the list key", () => {
   const asc = new URLSearchParams("sort=stars&ord=asc");
   assert.notEqual(catalogListKey(desc), catalogListKey(asc));
 });
+
+test("update sort puts missing times last", () => {
+  const items = [
+    Object.assign(row("none", { stars: 100 }), { updated: 0 }),
+    Object.assign(row("old", { stars: 1 }), { updated: 100 }),
+    Object.assign(row("new", { stars: 1 }), { updated: 300 }),
+    Object.assign(row("mid", { stars: 1 }), { updated: 200 }),
+  ];
+  const names = (order) => filterPlugins(items, { sort: "updated", order }).map((item) => item.name);
+  assert.deepEqual(names("desc"), ["new", "mid", "old", "none"]);
+  assert.deepEqual(names("asc"), ["old", "mid", "new", "none"]);
+});
+
+test("publish filter keeps only plugins inside the window", () => {
+  const now = Date.parse("2026-10-29T12:00:00Z");
+  const sec = Math.floor(now / 1000);
+  const day = 86400;
+  const items = [
+    Object.assign(row("today", { stars: 1 }), { published: sec - 3600 }),
+    Object.assign(row("week", { stars: 50 }), { published: sec - 5 * day }),
+    Object.assign(row("old", { stars: 9 }), { published: sec - 40 * day }),
+    row("unknown", { stars: 999 }),
+  ];
+  const names = (pub) => filterPlugins(items, { pub, now }).map((item) => item.name);
+  assert.deepEqual(names("1d"), ["today"]);
+  assert.deepEqual(names("7d"), ["today", "week"]);
+  assert.deepEqual(names("30d"), ["today", "week"]);
+  assert.deepEqual(names("90d"), ["today", "week", "old"]);
+  assert.deepEqual(names(""), ["today", "week", "old", "unknown"]);
+});
+
+test("publish filter changes the list key", () => {
+  const open = new URLSearchParams("pub=7d");
+  const plain = new URLSearchParams();
+  assert.notEqual(catalogListKey(open), catalogListKey(plain));
+});

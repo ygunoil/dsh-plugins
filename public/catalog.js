@@ -1,4 +1,4 @@
-export const FIELDS = ["id", "name", "desc", "stars", "cat", "repo", "npm", "ver", "install", "src", "level", "risk", "health", "downloads", "lang", "dsh", "page"];
+export const FIELDS = ["id", "name", "desc", "stars", "cat", "repo", "npm", "ver", "install", "src", "level", "risk", "health", "downloads", "lang", "dsh", "page", "updated", "published"];
 
 export const SOURCE = {
   topic: 1,
@@ -170,6 +170,30 @@ export function getById(id) {
   return byId.get(id) || items.find((plugin) => plugin.id === id) || null;
 }
 
+export const PUBLISHED = [
+  ["", "全部", "不限发布时间"],
+  ["1d", "1天", "最近 1 天发布"],
+  ["3d", "3天", "最近 3 天发布"],
+  ["7d", "1周", "最近 1 周发布"],
+  ["30d", "1月", "最近 1 个月发布"],
+  ["90d", "3月", "最近 3 个月发布"],
+  ["180d", "半年", "最近半年发布"],
+  ["365d", "1年", "最近 1 年发布"],
+];
+
+export function publishedCutoff(key, now = Date.now()) {
+  const date = new Date(now);
+  if (key === "1d") date.setDate(date.getDate() - 1);
+  else if (key === "3d") date.setDate(date.getDate() - 3);
+  else if (key === "7d") date.setDate(date.getDate() - 7);
+  else if (key === "30d") date.setMonth(date.getMonth() - 1);
+  else if (key === "90d") date.setMonth(date.getMonth() - 3);
+  else if (key === "180d") date.setMonth(date.getMonth() - 6);
+  else if (key === "365d") date.setFullYear(date.getFullYear() - 1);
+  else return 0;
+  return Math.floor(date.getTime() / 1000);
+}
+
 function comparePlugins(sort, order) {
   const dir = order === "asc" ? 1 : -1;
   const byName = (a, b) => String(a.name || "").localeCompare(String(b.name || ""), "zh");
@@ -177,6 +201,14 @@ function comparePlugins(sort, order) {
   if (sort === "name") return (a, b) => byName(a, b) * dir || (stars(b) - stars(a));
   if (sort === "level") return (a, b) => ((a.level || 0) - (b.level || 0)) * dir || (stars(b) - stars(a)) || byName(a, b);
   if (sort === "downloads") return (a, b) => ((a.downloads || 0) - (b.downloads || 0)) * dir || (stars(b) - stars(a)) || byName(a, b);
+  if (sort === "updated") {
+    return (a, b) => {
+      const left = a.updated || 0;
+      const right = b.updated || 0;
+      if (!left !== !right) return left ? -1 : 1;
+      return (left - right) * dir || byName(a, b);
+    };
+  }
   return (a, b) => (stars(a) - stars(b)) * dir || byName(a, b);
 }
 
@@ -212,6 +244,7 @@ export function catalogListKey(params) {
   const sort = get("sort");
   const order = get("ord");
   const page = get("page");
+  const pub = get("pub");
   return [
     get("q"),
     get("cat"),
@@ -219,20 +252,26 @@ export function catalogListKey(params) {
     level === "0" ? "" : level,
     !sort || sort === "stars" ? "" : sort,
     order === "asc" ? "asc" : "",
+    ["1d", "3d", "7d", "30d", "90d", "180d", "365d"].includes(pub) ? pub : "",
     !page || page === "1" ? "" : page,
   ].join("|");
 }
 
-export function filterPlugins(list, { q = "", cat = "", src = 0, level = 0, sort = "stars", order = "desc" } = {}) {
+export function filterPlugins(list, { q = "", cat = "", src = 0, level = 0, sort = "stars", order = "desc", pub = "", now = Date.now() } = {}) {
   const needle = q.trim().toLowerCase();
   const tokens = needle.split(/\s+/).filter(Boolean);
   const direction = order === "asc" ? "asc" : "desc";
-  const field = ["name", "level", "downloads"].includes(sort) ? sort : "stars";
+  const field = ["name", "level", "downloads", "updated"].includes(sort) ? sort : "stars";
+  const span = ["1d", "3d", "7d", "30d", "90d", "180d", "365d"].includes(pub) ? pub : "";
   let out = list;
   if (tokens.length) out = out.filter((plugin) => tokens.every((token) => plugin.q.includes(token)));
   if (cat) out = out.filter((plugin) => plugin.cat === cat);
   if (src) out = out.filter((plugin) => plugin.src & src);
   if (level) out = out.filter((plugin) => plugin.level === Number(level));
+  if (span) {
+    const cutoff = publishedCutoff(span, now);
+    out = out.filter((plugin) => plugin.published && plugin.published >= cutoff);
+  }
   const relevance = tokens.length && field === "stars" && direction === "desc";
   if (relevance) {
     const tie = comparePlugins("stars", "desc");

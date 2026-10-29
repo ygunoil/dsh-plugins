@@ -72,6 +72,34 @@ function descriptionOf(value) {
   return clip(cleanText(value), 200);
 }
 
+function unixTime(value) {
+  if (value == null || value === "") return 0;
+  const numeric = typeof value === "number" ? value : Number(value);
+  let sec = 0;
+  if (Number.isFinite(numeric) && String(value).trim() !== "") {
+    sec = numeric > 1e12 ? Math.round(numeric / 1000) : Math.round(numeric);
+  } else {
+    const ms = Date.parse(String(value));
+    if (Number.isFinite(ms)) sec = Math.floor(ms / 1000);
+  }
+  if (sec < 1_000_000_000 || sec > 2_200_000_000) return 0;
+  return sec;
+}
+
+function versionTimes(versions) {
+  let updated = 0;
+  let published = 0;
+  if (!Array.isArray(versions)) return { updated, published };
+  for (const version of versions) {
+    const stamp = unixTime(version?.publishTimestamp);
+    if (!stamp) continue;
+    updated = Math.max(updated, stamp);
+    published = published ? Math.min(published, stamp) : stamp;
+  }
+  return { updated, published };
+}
+
+
 export function fromDsh(plugin) {
   const repo = repoKey(plugin.source) || repoKey(plugin.install) || repoKey(plugin.download);
   const npm = npmFromInstall(plugin.install);
@@ -98,6 +126,19 @@ export function fromDsh(plugin) {
     dshId: plugin.id ? String(plugin.id) : null,
     page: null,
   };
+}
+
+export function safeIcon(value) {
+  const raw = String(value || "").trim();
+  if (!/^https:\/\/[^\s]+$/i.test(raw) || raw.length > 400) return null;
+  try {
+    const url = new URL(raw);
+    if (url.username || url.password) return null;
+    if (!/\.(png|jpe?g|webp|gif|svg)$/i.test(url.pathname)) return null;
+    return url.href;
+  } catch {
+    return null;
+  }
 }
 
 export function fromAwesome(plugin) {
@@ -129,6 +170,7 @@ export function fromAwesome(plugin) {
     lang: null,
     dshId: null,
     page: typeof plugin.page === "string" ? plugin.page : null,
+    icon: safeIcon(plugin.icon),
   };
 }
 
@@ -137,6 +179,7 @@ export function fromMarket(plugin) {
   const npm = npmKey(plugin.name);
   const cat = normCat(plugin.metadata?.category);
   const short = npm ? npm.split("/").pop() : "";
+  const times = versionTimes(plugin.versions);
   const version = Array.isArray(plugin.versions) ? plugin.versions[0]?.version : null;
   return {
     name: clip(cleanText(short), 80),
@@ -159,6 +202,8 @@ export function fromMarket(plugin) {
     lang: null,
     dshId: null,
     page: null,
+    updated: times.updated,
+    published: times.published,
   };
 }
 
@@ -187,5 +232,7 @@ export function fromWorkshop(plugin) {
     lang: plugin.l ? cleanText(plugin.l).slice(0, 40) : null,
     dshId: null,
     page: null,
+    updated: unixTime(plugin.u),
+    published: unixTime(plugin.c),
   };
 }

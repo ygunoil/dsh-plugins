@@ -21,11 +21,14 @@ import {
   onProgress,
   replaceItems,
   catalogListKey,
-} from "./catalog.js?v=20261029y";
+  PUBLISHED,
+} from "./catalog.js?v=20261029zk";
 import { readPackageJson } from "./zip.js?v=20261027";
 
 const app = document.querySelector("#app");
-const state = { q: "", cat: "", src: 0, level: 0, sort: "stars", order: "desc", page: 1 };
+const state = { q: "", cat: "", src: 0, level: 0, sort: "stars", order: "desc", pub: "", page: 1 };
+const SORTS = ["stars", "level", "downloads", "name", "updated"];
+const PUB_KEYS = new Set(PUBLISHED.map(([value]) => value).filter(Boolean));
 const pageSize = 24;
 let token = 0;
 let unsub = null;
@@ -56,6 +59,16 @@ const SOURCE_LABEL = [
 function day(value) {
   const match = String(value || "").match(/\d{4}-\d{2}-\d{2}/);
   return match ? match[0] : "";
+}
+
+function stampDay(value) {
+  const n = Number(value);
+  if (!n) return "";
+  const date = new Date(n * 1000);
+  if (Number.isNaN(date.getTime())) return "";
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const dayNum = String(date.getDate()).padStart(2, "0");
+  return `${date.getFullYear()}-${month}-${dayNum}`;
 }
 
 const num = (value) => Number(value || 0).toLocaleString("zh-CN");
@@ -128,6 +141,7 @@ function marketHash() {
   if (state.level) params.set("lv", String(state.level));
   if (state.sort && state.sort !== "stars") params.set("sort", state.sort);
   if (state.order === "asc") params.set("ord", "asc");
+  if (state.pub) params.set("pub", state.pub);
   if (state.page > 1) params.set("page", String(state.page));
   const query = params.toString();
   return query ? `#/market?${query}` : "#/market";
@@ -138,8 +152,9 @@ function applyMarketParams(params) {
   state.cat = params.get("cat") || "";
   state.src = 0;
   state.level = Number(params.get("lv") || 0);
-  state.sort = ["level", "downloads", "name"].includes(params.get("sort")) ? params.get("sort") : "stars";
+  state.sort = SORTS.includes(params.get("sort")) ? params.get("sort") : "stars";
   state.order = params.get("ord") === "asc" ? "asc" : "desc";
+  state.pub = PUB_KEYS.has(params.get("pub")) ? params.get("pub") : "";
   state.page = Math.max(1, Number(params.get("page") || 1) || 1);
 }
 
@@ -216,6 +231,7 @@ function pluginHref(id) {
   if (state.level) params.set("lv", String(state.level));
   if (state.sort && state.sort !== "stars") params.set("sort", state.sort);
   if (state.order === "asc") params.set("ord", "asc");
+  if (state.pub) params.set("pub", state.pub);
   if (state.page > 1) params.set("page", String(state.page));
   return `#/plugin?${params}`;
 }
@@ -436,13 +452,15 @@ function paintFilters() {
   const root = document.getElementById("filters");
   if (!root) return;
   const levels = [[0, "全部"], [5, "L5"], [4, "L4"], [3, "L3"], [2, "L2"], [1, "L1"]];
-  const sorts = [["stars", "Star"], ["level", "等级"], ["downloads", "下载"], ["name", "名称"]];
-  const orders = [["desc", "降序", "从高到低，名称从 Z 到 A"], ["asc", "升序", "从低到高，名称从 A 到 Z"]];
-  const group = (label, html) => `<div class="seg-group"><span>${label}</span><div>${html}</div></div>`;
-  const sortButtons = sorts.map(([value, label]) => segButton("sort", value, label, (state.sort || "stars") === value)).join("");
+  const sorts = [["stars", "Star"], ["level", "等级"], ["downloads", "下载"], ["name", "名称"], ["updated", "更新", "按更新时间"]];
+  const orders = [["desc", "降序", "从新到旧，数值从高到低"], ["asc", "升序", "从旧到新，数值从低到高"]];
+  const group = (label, html, title = "") => `<div class="seg-group"><span${title ? ` title="${esc(title)}"` : ""}>${label}</span><div>${html}</div></div>`;
+  const sortButtons = sorts.map(([value, label, title]) => segButton("sort", value, label, (state.sort || "stars") === value, title || "")).join("");
   const orderButtons = orders.map(([value, label, title]) => segButton("order", value, label, (state.order || "desc") === value, title)).join("");
+  const pubButtons = PUBLISHED.map(([value, label, title]) => segButton("pub", value, label, (state.pub || "") === value, title)).join("");
   root.innerHTML = [
     group("等级", levels.map(([value, label]) => segButton("level", value, label, state.level === value)).join("")),
+    group("发布", pubButtons, "只显示来源里记录了发布时间的插件"),
     group("排序", `${sortButtons}<span class="seg-gap"></span>${orderButtons}`),
   ].join("");
 }
@@ -499,7 +517,7 @@ function paintResults() {
   const { page, pages, slice } = currentPage(filtered);
   const loading = !isLoaded() && state.src !== 32;
   const queryLabel = state.q.trim();
-  const extra = Boolean(state.cat || state.src || state.level || (state.sort && state.sort !== "stars") || state.order === "asc");
+  const extra = Boolean(state.cat || state.src || state.level || state.pub || (state.sort && state.sort !== "stars") || state.order === "asc");
   const filtering = Boolean(queryLabel || extra);
   const catName = state.cat ? catLabel(state.cat) : "";
   const hit = categoryHit();
@@ -588,7 +606,7 @@ async function renderMarket(my) {
     </section>
     </aside>
     <div class="market-main">
-    <div class="filter-strip" id="filters" aria-label="等级和排序"></div>
+    <div class="filter-strip" id="filters" aria-label="等级、发布时间和排序"></div>
     <div id="results"></div>
     </div>
     </div>
@@ -714,6 +732,8 @@ function factRow(plugin) {
     ["风险", plugin.risk ? (RISK[plugin.risk] || "—") : "—"],
     ["语言", plugin.lang || "—"],
     ["版本", shownVersion(plugin) || "—"],
+    ["发布", stampDay(plugin.published) || "—", plugin.published ? "来源记录的发布时间" : ""],
+    ["更新", stampDay(plugin.updated) || "—", plugin.updated ? "来源记录的更新时间" : ""],
     ["Star", plugin.stars ? compact(plugin.stars) : "—", plugin.stars ? num(plugin.stars) : "", "fact-star"],
     ["下载", plugin.downloads ? compact(plugin.downloads) : "—", plugin.downloads ? num(plugin.downloads) : ""],
     ["状态", plugin.health ? (HEALTH[plugin.health] || "异常") : (plugin.repo ? "未见异常" : "—"), "", "", Boolean(plugin.health)],
@@ -1351,7 +1371,7 @@ async function syncNow() {
   syncing = true;
   setFresh("正在从四个源站同步…", cancelButton());
   try {
-    const { pullLive } = await import("./live.js?v=20261029t");
+    const { pullLive } = await import("./live.js?v=20261029zk");
     const { items, stamps } = await pullLive((message) => setFresh(message, cancelButton()));
     const builtAt = new Date().toISOString();
     replaceItems(items, builtAt);
@@ -1394,7 +1414,7 @@ async function watchSources() {
       ? `构建于 ${day(manifest.builtAt) || "未知"}，已经不是最新。`
       : `构建于 ${day(manifest.builtAt) || "未知"}。源站有变化时可以马上同步。`, button);
   }
-  const { probeSources } = await import("./live.js?v=20261029t");
+  const { probeSources } = await import("./live.js?v=20261029zk");
   const changed = await probeSources(manifest.upstream);
   if (syncing) return;
   if (changed.length) setFresh(`源站有更新：${changed.join("、")}。`, syncButton("立即同步"));
@@ -1512,7 +1532,7 @@ document.body.addEventListener("click", async (event) => {
       syncSearch();
     }
   }
-  if (act === "cat" || act === "src" || act === "level" || act === "sort" || act === "order") {
+  if (act === "cat" || act === "src" || act === "level" || act === "sort" || act === "order" || act === "pub") {
     event.preventDefault();
     if (act === "cat") {
       const nextCat = button.dataset.cat || "";
@@ -1523,8 +1543,9 @@ document.body.addEventListener("click", async (event) => {
     }
     if (act === "src") state.src = Number(button.dataset.value);
     if (act === "level") state.level = Number(button.dataset.value);
-    if (act === "sort") state.sort = ["level", "downloads", "name"].includes(button.dataset.value) ? button.dataset.value : "stars";
+    if (act === "sort") state.sort = SORTS.includes(button.dataset.value) ? button.dataset.value : "stars";
     if (act === "order") state.order = button.dataset.value === "asc" ? "asc" : "desc";
+    if (act === "pub") state.pub = PUB_KEYS.has(button.dataset.value) ? button.dataset.value : "";
     state.page = 1;
     const next = marketHash();
     if (location.hash !== next) location.hash = next;
@@ -1552,6 +1573,7 @@ document.body.addEventListener("click", async (event) => {
     state.level = 0;
     state.sort = "stars";
     state.order = "desc";
+    state.pub = "";
     state.page = 1;
     syncSearch();
     const next = marketHash();
@@ -1564,7 +1586,7 @@ document.body.addEventListener("click", async (event) => {
   }
   if (act === "cancel-sync") {
     event.preventDefault();
-    const { cancelPull } = await import("./live.js?v=20261029t");
+    const { cancelPull } = await import("./live.js?v=20261029zk");
     cancelPull();
   }
   if (act === "copy") {

@@ -148,6 +148,30 @@ test("repo subpaths stay separate from the root plugin", () => {
   assert.match(child.install, /@tt-a1i\/archify-dsh/);
 });
 
+test("publish time is the earliest and update time is the latest", () => {
+  const created = Math.floor(Date.parse("2024-01-02T00:00:00Z") / 1000);
+  const pushed = Math.floor(Date.parse("2026-10-20T00:00:00Z") / 1000);
+  const released = 1793000000;
+  const merged = mergeRecords([
+    fromWorkshop({
+      n: "Bar",
+      o: "Foo",
+      d: "workshop desc",
+      s: 1,
+      u: "2026-10-20T00:00:00Z",
+      c: "2024-01-02T00:00:00Z",
+    }),
+    fromMarket({
+      name: "@foo/bar",
+      repository: { url: "https://github.com/foo/bar" },
+      versions: [{ version: "1.4.0", publishTimestamp: released }],
+    }),
+  ]);
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].published, created);
+  assert.equal(merged[0].updated, Math.max(pushed, released));
+});
+
 test("catalog fields stay aligned", () => {
   assert.deepEqual(catalogFields, mergeFields);
   assert.deepEqual(catalogSource, SOURCE);
