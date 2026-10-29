@@ -475,7 +475,16 @@ function paintHot() {
   }).join("");
 }
 
+function paintTotal() {
+  const slot = document.getElementById("plugin-total");
+  if (!slot) return;
+  const total = getManifest()?.total || 0;
+  slot.hidden = !total;
+  slot.textContent = total ? `共 ${num(total)}` : "";
+}
+
 function paintResults() {
+  paintTotal();
   const root = document.getElementById("results");
   if (!root) return;
   const manifest = getManifest();
@@ -1358,6 +1367,7 @@ async function syncNow() {
         loadRemote(current);
       }
     } else paintResults();
+    paintTotal();
     setFresh(`已同步 ${num(items.length)} 条，更新于 ${day(builtAt)}。`, syncButton("再次同步"));
   } catch (error) {
     if (error?.name === "AbortError") setFresh("同步已取消。", syncButton());

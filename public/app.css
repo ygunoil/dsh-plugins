@@ -75,6 +75,40 @@ body.is-market .top-title {
   cursor: pointer;
 }
 .top-title button:hover { color: #4d6bfe; }
+.top-title button { display: inline-flex; align-items: center; gap: 10px; }
+.find-line {
+  background: linear-gradient(105deg, #2a46d6 0%, #4d6bfe 32%, #d5defe 48%, #4d6bfe 64%, #243fb8 100%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: find-shine 5.2s ease-in-out infinite;
+}
+.find-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 8px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #6d86ff, #3d5bfe);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45), 0 6px 18px rgba(77, 107, 254, 0.38);
+}
+.find-count::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 8px #fff;
+}
+@keyframes find-shine {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
 #session { position: relative; z-index: 1; }
 .nav a, .btn, .btn-ghost { border-radius: 999px; padding: 8px 14px; }
 .nav a.is-on, .nav a:hover { background: transparent; color: #4d6bfe; }
@@ -934,7 +968,7 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fo
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .cat-board::before, .add-banner::before,
-  .stage-floor, .stage-glow, .orb, .stage h1, .composer::before, .composer-go { animation: none; }
+  .stage-floor, .stage-glow, .orb, .stage h1, .composer::before, .composer-go, .find-line { animation: none; }
   .cat-chip:hover, .card:hover { transform: none; }
 }
 
@@ -954,7 +988,7 @@ body.is-market .top {
   background: rgba(255, 255, 255, 0.78);
   border-bottom: 1px solid rgba(15, 23, 42, 0.06);
 }
-body.is-market .top-title { font-size: 18px; font-weight: 600; letter-spacing: 0.08em; }
+body.is-market .top-title { font-size: 18px; font-weight: 600; letter-spacing: 0.06em; max-width: min(860px, calc(100vw - 260px)); overflow: visible; }
 body.is-market .wrap { padding-inline: 36px; }
 body.is-market .fresh {
   position: static;
