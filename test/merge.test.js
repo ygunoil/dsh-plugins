@@ -263,3 +263,32 @@ test("plugin icon stays when it is an https image", () => {
   assert.equal(icon.icon, "https://raw.githubusercontent.com/Foo/Icon/main/assets/icon.png");
   assert.equal(bad.icon, null);
 });
+
+test("plugin screenshots keep https images and drop unsafe urls", () => {
+  const merged = mergeRecords([
+    fromAwesome({
+      name: "Shot",
+      url: "https://github.com/Foo/Shot",
+      screenshots: [
+        "https://raw.githubusercontent.com/Foo/Shot/HEAD/assets/one.png",
+        "https://github.com/Foo/Shot/blob/main/docs/two.jpg",
+        "https://github.com/user-attachments/assets/97272196-6d92-4e6a-90dc-b7158819496c",
+        "https://raw.githubusercontent.com/Foo/Shot/HEAD/assets/one.png",
+        "javascript:alert(1)",
+        "https://raw.githubusercontent.com/Foo/Shot/HEAD/assets/icon.svg",
+      ],
+    }),
+    fromAwesome({
+      name: "Shot",
+      url: "https://github.com/Foo/Shot",
+      screenshots: ["https://raw.githubusercontent.com/Foo/Shot/HEAD/assets/three.webp"],
+    }),
+  ]);
+  const shot = merged.find((item) => item.repo === "foo/shot");
+  assert.deepEqual(shot.shots, [
+    "https://raw.githubusercontent.com/Foo/Shot/HEAD/assets/one.png",
+    "https://raw.githubusercontent.com/Foo/Shot/main/docs/two.jpg",
+    "https://github.com/user-attachments/assets/97272196-6d92-4e6a-90dc-b7158819496c",
+    "https://raw.githubusercontent.com/Foo/Shot/HEAD/assets/three.webp",
+  ]);
+});

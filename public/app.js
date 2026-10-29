@@ -22,7 +22,7 @@ import {
   replaceItems,
   catalogListKey,
   PUBLISHED,
-} from "./catalog.js?v=20261029zk";
+} from "./catalog.js?v=20261029zn";
 import { readPackageJson } from "./zip.js?v=20261027";
 
 const app = document.querySelector("#app");
@@ -287,6 +287,24 @@ function pluginIcon(plugin, large = false) {
   return `<img class="card-icon${large ? " is-lg" : ""}" src="${esc(plugin.icon)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="this.remove()">`;
 }
 
+function shotUrls(plugin) {
+  if (!Array.isArray(plugin.shots)) return [];
+  return plugin.shots.filter((url) => typeof url === "string" && url.startsWith("https://"));
+}
+
+function cardShot(plugin) {
+  const url = shotUrls(plugin)[0];
+  if (!url) return "";
+  return `<img class="card-shot" src="${esc(url)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="var card=this.closest('.card');if(card)card.classList.remove('has-shot');this.remove()">`;
+}
+
+function shotGallery(plugin) {
+  const urls = shotUrls(plugin);
+  if (!urls.length) return "";
+  const items = urls.map((url, index) => `<a class="shot" href="${esc(url)}" target="_blank" rel="noopener noreferrer"><img src="${esc(url)}" alt="${esc(`${plugin.name} 截图 ${index + 1}`)}" loading="eager" decoding="async" referrerpolicy="no-referrer" onload="this.classList.add('is-in')" onerror="var box=this.parentElement,grid=box&&box.parentElement;if(box)box.remove();if(grid&&!grid.children.length)grid.remove()"></a>`).join("");
+  return `<div class="shot-grid" aria-label="源站截图">${items}</div>`;
+}
+
 function card(plugin) {
   const repo = plugin.repo || plugin.npm || "";
   const cat = plugin.cat && plugin.cat !== "other" ? `<span class="pill">${hi(catLabel(plugin.cat))}</span>` : "";
@@ -295,12 +313,16 @@ function card(plugin) {
   const command = plugin.install
     ? `<div class="card-add"><code title="${esc(plugin.install)}">${esc(addTarget(plugin.install))}</code><span class="add-btns"><button class="btn" type="button" data-act="copy" data-copy="${esc(withProfile(plugin.install, "web"))}" title="复制 Web 命令">Web</button>${desktopSpec(plugin.install) ? `<button class="btn btn-ghost" type="button" data-act="copy" data-copy="${esc(desktopSpec(plugin.install))}" title="粘贴到 Desktop 侧栏「插件 → 添加插件」，装完点「立即启用」">Desktop</button>` : ""}</span></div>`
     : "";
-  return `<article class="card${plugin.health === 1 ? " is-dead" : ""}">
+  const shot = cardShot(plugin);
+  return `<article class="card${plugin.health === 1 ? " is-dead" : ""}${shot ? " has-shot" : ""}">
     <a class="card-main" href="${esc(pluginHref(plugin.id))}">
+      ${shot}
+      <div class="card-copy">
       <header>${pluginIcon(plugin)}<h3>${hi(plugin.name)}</h3><span class="card-metrics">${cardMetric(plugin.stars, "star", "Star")}${cardMetric(plugin.downloads, "down", "下载")}</span></header>
       ${repo ? `<p class="repo">${hi(repo)}</p>` : ""}
       <p class="desc">${hi(plugin.desc || "暂无简介")}</p>
       <footer>${cat}${levelChip(plugin)}${riskChip(plugin)}${health}${local}<span class="view">查看</span></footer>
+      </div>
     </a>
     ${command}
   </article>`;
@@ -825,6 +847,7 @@ function pluginHtml(plugin) {
     <header class="panel detail-hero">
       <div class="detail-name">${pluginIcon(plugin, true)}<h1>${esc(plugin.name)}</h1></div>
       <p class="lede">${esc(plugin.desc || "暂无简介")}</p>
+      ${shotGallery(plugin)}
       <p class="meta-line">${repoLine}</p>
       ${clipped}
       ${factRow(plugin)}
@@ -1371,7 +1394,7 @@ async function syncNow() {
   syncing = true;
   setFresh("正在从四个源站同步…", cancelButton());
   try {
-    const { pullLive } = await import("./live.js?v=20261029zk");
+    const { pullLive } = await import("./live.js?v=20261029zn");
     const { items, stamps } = await pullLive((message) => setFresh(message, cancelButton()));
     const builtAt = new Date().toISOString();
     replaceItems(items, builtAt);
@@ -1414,7 +1437,7 @@ async function watchSources() {
       ? `构建于 ${day(manifest.builtAt) || "未知"}，已经不是最新。`
       : `构建于 ${day(manifest.builtAt) || "未知"}。源站有变化时可以马上同步。`, button);
   }
-  const { probeSources } = await import("./live.js?v=20261029zk");
+  const { probeSources } = await import("./live.js?v=20261029zn");
   const changed = await probeSources(manifest.upstream);
   if (syncing) return;
   if (changed.length) setFresh(`源站有更新：${changed.join("、")}。`, syncButton("立即同步"));
@@ -1586,7 +1609,7 @@ document.body.addEventListener("click", async (event) => {
   }
   if (act === "cancel-sync") {
     event.preventDefault();
-    const { cancelPull } = await import("./live.js?v=20261029zk");
+    const { cancelPull } = await import("./live.js?v=20261029zn");
     cancelPull();
   }
   if (act === "copy") {

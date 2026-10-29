@@ -820,6 +820,42 @@ mark { background: rgba(77, 107, 254, 0.16); color: inherit; border-radius: 4px;
 .card-metrics { display: flex; gap: 10px; flex: none; align-items: baseline; margin-left: 8px; }
 .card-icon { width: 22px; height: 22px; flex: none; border-radius: 6px; object-fit: cover; background: #f4f7fb; }
 .card-icon.is-lg { width: 40px; height: 40px; border-radius: 10px; }
+.card-copy { display: contents; }
+.card.has-shot .card-copy { display: flex; flex: 1; flex-direction: column; min-width: 0; min-height: 0; }
+.card-shot {
+  display: block;
+  width: 100%;
+  height: 92px;
+  margin: 0 0 10px;
+  object-fit: cover;
+  object-position: top center;
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: 10px;
+  background: #f4f7fb;
+  flex: none;
+}
+.shot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+  margin-top: 16px;
+}
+.shot { display: block; }
+.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 480px;
+  object-fit: contain;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+}
+.shot img.is-in {
+  border: 1px solid var(--line);
+  background: #f7f8fb;
+}
+.shot-grid .shot:only-child { grid-column: 1 / -1; }
 .detail-name { display: flex; align-items: center; gap: 12px; }
 .detail-name h1 { margin: 0; }
 .card-metric { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; color: var(--blue-2); }
@@ -1215,6 +1251,8 @@ body.is-market .card {
   min-height: 0;
 }
 body.is-market .card-main { min-height: 0; overflow: hidden; padding: 12px 14px 4px; }
+body.is-market .card.has-shot .card-main { flex-direction: row; align-items: stretch; gap: 10px; }
+body.is-market .card.has-shot .card-shot { width: 116px; height: 100%; margin: 0; align-self: stretch; }
 body.is-market .card header { min-width: 0; align-items: center; }
 body.is-market .card h3 {
   flex: 1;

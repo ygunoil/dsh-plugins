@@ -63,6 +63,7 @@ let manifest = null;
 let items = [];
 let loaded = false;
 let icons = null;
+let shots = null;
 let loading = null;
 let revision = 0;
 const byId = new Map();
@@ -101,6 +102,25 @@ function stampIcons(list) {
   for (const plugin of list) plugin.icon = icons[plugin.id] || "";
 }
 
+async function ensureShots(version) {
+  if (shots) return shots;
+  try {
+    const response = await fetch(`./data/shots.json?v=${encodeURIComponent(version || "0")}`, { cache: "force-cache" });
+    shots = response.ok ? await response.json() : {};
+  } catch {
+    shots = {};
+  }
+  return shots;
+}
+
+function stampShots(list) {
+  if (!shots) return;
+  for (const plugin of list) {
+    if (Array.isArray(plugin.shots) && plugin.shots.length) continue;
+    plugin.shots = shots[plugin.id] || [];
+  }
+}
+
 export function hydrate(row) {
   const plugin = { local: false };
   FIELDS.forEach((key, index) => {
@@ -135,7 +155,7 @@ export function ensureAll() {
       return items;
     }
     const version = encodeURIComponent(data.builtAt || "0");
-    await ensureIcons(data.builtAt || "0");
+    await Promise.all([ensureIcons(data.builtAt || "0"), ensureShots(data.builtAt || "0")]);
     const loadShard = async (shard) => {
       const response = await fetch(`./${shard}?v=${version}`, { cache: "force-cache" });
       if (!response.ok) throw new Error("分片加载失败");
@@ -145,6 +165,7 @@ export function ensureAll() {
       if (rev !== revision) return;
       items = rows.map(hydrate);
       stampIcons(items);
+      stampShots(items);
       byId.clear();
       for (const plugin of items) byId.set(plugin.id, plugin);
       for (const fn of listeners) fn(items.length, data.total);
@@ -288,6 +309,8 @@ export function replaceItems(plugins, builtAt = new Date().toISOString()) {
     const next = { ...plugin, local: false };
     next.q = [next.name, next.desc, next.repo, next.npm, next.id, catLabel(next.cat)].filter(Boolean).join("\n").toLowerCase();
     next.icon = icons?.[next.id] || "";
+    const ownShots = Array.isArray(next.shots) ? next.shots.filter((url) => typeof url === "string" && url) : [];
+    next.shots = ownShots.length ? ownShots : (shots?.[next.id] || []);
     return next;
   });
   byId.clear();

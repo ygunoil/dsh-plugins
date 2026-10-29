@@ -1,5 +1,5 @@
 {
-  "builtAt": "2026-10-29T06:46:23.446Z",
+  "builtAt": "2026-10-29T07:05:36.646Z",
   "total": 26237,
   "fields": [
     "id",
@@ -421,18 +421,18 @@
       "source": "https://www.dsh.so/artifacts/"
     },
     "awesome": {
-      "etag": "W/\"6ae2cbdf-943492\"",
+      "etag": "W/\"6ae2cbeb-943492\"",
       "bytes": 2348301,
-      "modified": "Thu, 29 Oct 2026 04:30:23 GMT",
+      "modified": "Thu, 29 Oct 2026 04:30:35 GMT",
       "updated": "2026-10-25",
       "license": "CC0-1.0",
       "url": "https://awesome-dsh-plugin.com",
       "source": "https://github.com/awesome-dsh-plugin/awesome-dsh-plugin"
     },
     "market": {
-      "etag": "W/\"6ae1c77f-2e72f4\"",
+      "etag": "W/\"6ae1c780-2e72f4\"",
       "bytes": 906198,
-      "modified": "Wed, 28 Oct 2026 09:59:27 GMT",
+      "modified": "Wed, 28 Oct 2026 09:59:28 GMT",
       "format": 1,
       "url": "https://dshmarket.com/"
     },

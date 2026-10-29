@@ -185,10 +185,13 @@ const manifest = {
 
 await writeFile(path.join(dataDir, "manifest.json"), JSON.stringify(manifest, null, 2));
 const icons = {};
+const shots = {};
 for (const record of merged) {
   if (record.icon) icons[record.id] = record.icon;
+  if (record.shots?.length) shots[record.id] = record.shots;
 }
 await writeFile(path.join(dataDir, "icons.json"), JSON.stringify(icons));
+await writeFile(path.join(dataDir, "shots.json"), JSON.stringify(shots));
 const engineDir = path.join(root, "public", "engine");
 await mkdir(engineDir, { recursive: true });
 await cp(path.join(root, "lib", "merge.js"), path.join(engineDir, "merge.js"));

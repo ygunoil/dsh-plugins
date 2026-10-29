@@ -136,6 +136,7 @@ function blank() {
     dshId: null,
     page: null,
     icon: null,
+    shots: [],
     sub: false,
     updated: 0,
     published: 0,
@@ -173,6 +174,13 @@ function absorb(base, extra) {
   if (!base.dshId && extra.dshId) base.dshId = extra.dshId;
   if (!base.page && extra.page) base.page = extra.page;
   if (!base.icon && extra.icon) base.icon = extra.icon;
+  if (Array.isArray(extra.shots)) {
+    for (const shot of extra.shots) {
+      if (base.shots.length >= 8) break;
+      if (!shot || base.shots.includes(shot)) continue;
+      base.shots.push(shot);
+    }
+  }
   if (extra.sub) base.sub = true;
   if (extra.updated) base.updated = Math.max(base.updated || 0, extra.updated);
   if (extra.published) base.published = base.published ? Math.min(base.published, extra.published) : extra.published;
@@ -248,6 +256,7 @@ function finalize(record, index) {
     dsh: record.dshId ? `https://www.dsh.so/artifact/${encodeURIComponent(record.dshId)}/` : null,
     page: safePage(record.page),
     icon: record.icon || null,
+    shots: record.shots.length ? record.shots : undefined,
     updated: record.updated || null,
     published: record.published || null,
   };
