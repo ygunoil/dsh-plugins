@@ -22,8 +22,8 @@ import {
   replaceItems,
   catalogListKey,
   PUBLISHED,
-} from "./catalog.js?v=20261029zo";
-import { renderReadme } from "./readme.js?v=20261029zo";
+} from "./catalog.js?v=20261029zp";
+import { renderReadme } from "./readme.js?v=20261029zp";
 import { readPackageJson } from "./zip.js?v=20261027";
 
 const app = document.querySelector("#app");
@@ -861,7 +861,6 @@ function pluginHtml(plugin) {
         ${originSheet(plugin)}
         <h2 class="install-title">仓库说明</h2>
         <div id="repo-live" class="repo-live" data-repo="${esc(repoUrl)}" data-desc="${esc(plugin.desc || "")}">${readmeSlot}</div>
-        ${relatedHtml(plugin)}
       </article>
       <aside class="side">
         ${warn}
@@ -871,6 +870,7 @@ function pluginHtml(plugin) {
           <div class="stat"><b>${esc(shownVersion(plugin) || "—")}</b><span>版本</span></div>
           <div class="stat"><b>${esc(plugin.lang || "—")}</b><span>语言</span></div>
         </div>
+        ${relatedHtml(plugin)}
         <h2 class="side-title">收录来源</h2>
         <ul class="source-list">${sourceLines(plugin)}</ul>
         <div class="actions">${links}</div>
@@ -1282,7 +1282,7 @@ async function syncNow() {
   syncing = true;
   setFresh("正在从四个源站同步…", cancelButton());
   try {
-    const { pullLive } = await import("./live.js?v=20261029zo");
+    const { pullLive } = await import("./live.js?v=20261029zp");
     const { items, stamps } = await pullLive((message) => setFresh(message, cancelButton()));
     const builtAt = new Date().toISOString();
     replaceItems(items, builtAt);
@@ -1325,7 +1325,7 @@ async function watchSources() {
       ? `构建于 ${day(manifest.builtAt) || "未知"}，已经不是最新。`
       : `构建于 ${day(manifest.builtAt) || "未知"}。源站有变化时可以马上同步。`, button);
   }
-  const { probeSources } = await import("./live.js?v=20261029zo");
+  const { probeSources } = await import("./live.js?v=20261029zp");
   const changed = await probeSources(manifest.upstream);
   if (syncing) return;
   if (changed.length) setFresh(`源站有更新：${changed.join("、")}。`, syncButton("立即同步"));
@@ -1497,7 +1497,7 @@ document.body.addEventListener("click", async (event) => {
   }
   if (act === "cancel-sync") {
     event.preventDefault();
-    const { cancelPull } = await import("./live.js?v=20261029zo");
+    const { cancelPull } = await import("./live.js?v=20261029zp");
     cancelPull();
   }
   if (act === "copy") {

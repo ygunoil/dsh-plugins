@@ -923,7 +923,17 @@ mark { background: rgba(77, 107, 254, 0.16); color: inherit; border-radius: 4px;
 
 .detail, .detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
 .panel, .side { padding: 20px; }
-.detail-page .side { position: sticky; top: calc(var(--top-h, 68px) + 16px); }
+.detail-page .side {
+  position: sticky;
+  top: calc(var(--top-h, 68px) + 16px);
+  max-height: calc(100vh - var(--top-h, 68px) - 32px);
+  overflow: auto;
+}
+.side .relate-grid { grid-template-columns: 1fr; }
+.side .install-title:first-of-type { margin-top: 16px; }
+.side .relate { background: #f8fafc; }
+.side .relate strong { min-width: 0; }
+.side .more-cat { margin-bottom: 4px; }
 .detail-page h1 { font-size: 32px; }
 .detail-page { display: grid; gap: 14px; }
 .detail-hero { padding: 22px 24px 18px; }
