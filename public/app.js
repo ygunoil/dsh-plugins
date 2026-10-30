@@ -22,8 +22,8 @@ import {
   replaceItems,
   catalogListKey,
   PUBLISHED,
-} from "./catalog.js?v=20261031f";
-import { renderReadme } from "./readme.js?v=20261031f";
+} from "./catalog.js?v=20261031h";
+import { renderReadme } from "./readme.js?v=20261031h";
 import { readPackageJson } from "./zip.js?v=20261027";
 
 const app = document.querySelector("#app");
@@ -306,6 +306,13 @@ function shotGallery(plugin) {
   return `<div class="shot-grid" aria-label="源站截图">${items}</div>`;
 }
 
+
+function cardUpdated(plugin) {
+  const day = stampDay(plugin.updated);
+  if (!day) return "";
+  return `<time class="card-updated" datetime="${esc(day)}" title="更新于 ${esc(day)}"><svg class="metric-icon" viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M4 1.6h1.2V3h5.6V1.6H12V3h1.2c.7 0 1.2.5 1.2 1.2v9.1c0 .7-.5 1.2-1.2 1.2H2.8c-.7 0-1.2-.5-1.2-1.2V4.2c0-.7.5-1.2 1.2-1.2H4V1.6zM2.8 6.2v7.1h10.4V6.2H2.8z"/></svg>${esc(day)}</time>`;
+}
+
 function card(plugin) {
   const repo = plugin.repo || plugin.npm || "";
   const cat = plugin.cat && plugin.cat !== "other" ? `<span class="pill">${hi(catLabel(plugin.cat))}</span>` : "";
@@ -322,7 +329,7 @@ function card(plugin) {
       <header>${pluginIcon(plugin)}<h3>${hi(plugin.name)}</h3><span class="card-metrics">${cardMetric(plugin.stars, "star", "Star")}${cardMetric(plugin.downloads, "down", "下载")}</span></header>
       ${repo ? `<p class="repo">${hi(repo)}</p>` : ""}
       <p class="desc">${hi(plugin.desc || "暂无简介")}</p>
-      <footer>${cat}${levelChip(plugin)}${riskChip(plugin)}${health}${local}<span class="view">查看</span></footer>
+      <footer>${cat}${levelChip(plugin)}${riskChip(plugin)}${health}${local}${cardUpdated(plugin)}<span class="view">查看</span></footer>
       </div>
     </a>
     ${command}
@@ -490,7 +497,7 @@ function paintFilters() {
   const orderButton = segButton("order", descending ? "asc" : "desc", descending ? "降序" : "升序", true, descending ? "当前降序，点一下改为升序" : "当前升序，点一下改为降序");
   const pubButtons = PUBLISHED.map(([value, label, title]) => segButton("pub", value, label, (state.pub || "") === value, title)).join("");
   const levelGroup = group("等级", levels.map(([value, label]) => segButton("level", value, label, state.level === value)).join(""));
-  const pubGroup = group("发布", pubButtons, "只显示来源里记录了发布时间的插件");
+  const pubGroup = group("发布", pubButtons, "发布或更新落在这段时间里，包含今天");
   const sortGroup = group("排序", `${sortButtons}${orderButton}`);
   root.innerHTML = `<div class="filter-row">${levelGroup}${pubGroup}${sortGroup}</div>`;
 }
@@ -562,7 +569,7 @@ function paintResults() {
   const empty = loading
     ? "正在载入目录…"
     : state.pub
-      ? "这个时间里没有新发布的插件。只有记录了发布时间的才会出现在这里。"
+      ? "这个时间里没有发布或更新的插件。"
       : `没有匹配的插件。${filtering ? "可以清除条件后再找。" : ""}`;
   const cancelQ = queryLabel ? `<button type="button" class="text-btn" data-act="clear-q">取消</button>` : "";
   const clear = extra ? `<button type="button" class="text-btn" data-act="reset">清除条件</button>` : "";
@@ -1286,7 +1293,7 @@ async function syncNow() {
   syncing = true;
   setFresh("正在从四个源站同步…", cancelButton());
   try {
-    const { pullLive } = await import("./live.js?v=20261031f");
+    const { pullLive } = await import("./live.js?v=20261031h");
     const { items, stamps } = await pullLive((message) => setFresh(message, cancelButton()));
     const builtAt = new Date().toISOString();
     replaceItems(items, builtAt);
@@ -1329,7 +1336,7 @@ async function watchSources() {
       ? `构建于 ${day(manifest.builtAt) || "未知"}，已经不是最新。`
       : `构建于 ${day(manifest.builtAt) || "未知"}。源站有变化时可以马上同步。`, button);
   }
-  const { probeSources } = await import("./live.js?v=20261031f");
+  const { probeSources } = await import("./live.js?v=20261031h");
   const changed = await probeSources(manifest.upstream);
   if (syncing) return;
   if (changed.length) setFresh(`源站有更新：${changed.join("、")}。`, syncButton("立即同步"));
@@ -1635,7 +1642,7 @@ document.body.addEventListener("click", async (event) => {
   }
   if (act === "cancel-sync") {
     event.preventDefault();
-    const { cancelPull } = await import("./live.js?v=20261031f");
+    const { cancelPull } = await import("./live.js?v=20261031h");
     cancelPull();
   }
   if (act === "copy") {

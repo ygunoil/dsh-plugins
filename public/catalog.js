@@ -193,13 +193,13 @@ export function getById(id) {
 
 export const PUBLISHED = [
   ["", "全部", "不限发布时间"],
-  ["1d", "最近1天", "昨天 0 点（北京时间）至今发布"],
-  ["3d", "最近3天", "3 天前 0 点至今发布"],
-  ["7d", "最近1周", "7 天前 0 点至今发布"],
-  ["30d", "最近1月", "最近 1 个月发布"],
-  ["90d", "最近3月", "最近 3 个月发布"],
-  ["180d", "最近半年", "最近半年发布"],
-  ["365d", "最近1年", "最近 1 年发布"],
+  ["1d", "最近1天", "包含今天。昨天 0 点（北京时间）起有发布或更新"],
+  ["3d", "最近3天", "包含今天。3 天前 0 点起有发布或更新"],
+  ["7d", "最近1周", "包含今天。7 天前 0 点起有发布或更新"],
+  ["30d", "最近1月", "包含今天。最近 1 个月有发布或更新"],
+  ["90d", "最近3月", "包含今天。最近 3 个月有发布或更新"],
+  ["180d", "最近半年", "包含今天。最近半年有发布或更新"],
+  ["365d", "最近1年", "包含今天。最近 1 年有发布或更新"],
 ];
 
 const DAY = 86400;
@@ -297,7 +297,7 @@ export function filterPlugins(list, { q = "", cat = "", src = 0, level = 0, sort
   if (level) out = out.filter((plugin) => plugin.level === Number(level));
   if (span) {
     const cutoff = publishedCutoff(span, now);
-    out = out.filter((plugin) => plugin.published && plugin.published >= cutoff);
+    out = out.filter((plugin) => Math.max(plugin.published || 0, plugin.updated || 0) >= cutoff);
   }
   const relevance = tokens.length && field === "stars" && direction === "desc";
   if (relevance) {

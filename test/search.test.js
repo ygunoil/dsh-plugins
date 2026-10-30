@@ -132,3 +132,23 @@ test("publish filter changes the list key", () => {
   const plain = new URLSearchParams();
   assert.notEqual(catalogListKey(open), catalogListKey(plain));
 });
+
+test("last day includes a plugin updated today even if it was published earlier", () => {
+  const now = Date.parse("2026-10-30T06:00:00Z");
+  const updated = Math.floor(Date.parse("2026-10-30T05:52:00Z") / 1000);
+  const published = Math.floor(Date.parse("2026-04-14T00:51:32Z") / 1000);
+  const stale = Math.floor(Date.parse("2026-10-28T02:00:00Z") / 1000);
+  const items = [
+    Object.assign(row("today-update", { stars: 1 }), { published, updated }),
+    Object.assign(row("older-update", { stars: 1 }), { published, updated: stale }),
+  ];
+  assert.deepEqual(filterPlugins(items, { pub: "1d", now }).map((item) => item.name), ["today-update"]);
+});
+
+test("last day includes a plugin published today", () => {
+  const now = Date.parse("2026-10-30T06:00:00Z");
+  const published = Math.floor(Date.parse("2026-10-30T01:00:00Z") / 1000);
+  const items = [Object.assign(row("fresh", { stars: 1 }), { published })];
+  assert.deepEqual(filterPlugins(items, { pub: "1d", now }).map((item) => item.name), ["fresh"]);
+});
+

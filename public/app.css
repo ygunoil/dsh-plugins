@@ -744,6 +744,18 @@ h2 { margin: 0 0 12px; font-size: 18px; }
 }
 .card-add .btn-ghost { box-shadow: none; background: #fff; }
 .card .view { margin-left: auto; color: var(--blue-2); font-size: 12px; }
+.card-updated {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex: none;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.card-updated + .view { margin-left: 8px; }
 .card header, .card footer, .install, .split, .actions, .pager, .list article {
   display: flex;
   gap: 8px;
