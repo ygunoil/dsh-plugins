@@ -22,8 +22,8 @@ import {
   replaceItems,
   catalogListKey,
   PUBLISHED,
-} from "./catalog.js?v=20261030g";
-import { renderReadme } from "./readme.js?v=20261030g";
+} from "./catalog.js?v=20261030m";
+import { renderReadme } from "./readme.js?v=20261030m";
 import { readPackageJson } from "./zip.js?v=20261027";
 
 const app = document.querySelector("#app");
@@ -346,9 +346,17 @@ function pager(page, pages) {
   </nav>`;
 }
 
+function marketIsCompact() {
+  return window.matchMedia("(max-width: 1180px), (max-width: 1400px) and (hover: none)").matches;
+}
+
 function fitPageSize() {
   if (!document.body.classList.contains("is-market")) return pageSize;
   const results = document.getElementById("results");
+  if (marketIsCompact()) {
+    results?.style.removeProperty("--card-h");
+    return window.matchMedia("(max-width: 720px)").matches ? 8 : 12;
+  }
   if (!results || results.clientWidth < 240 || results.clientHeight < 140) return fittedSize;
   const gap = 16;
   const maxCard = 228;
@@ -618,7 +626,7 @@ async function renderMarket(my) {
     <form class="composer" id="seek-form">
       <input id="seek-q" type="search" placeholder="快速找到插件" autocomplete="off" aria-label="快速找到插件" aria-controls="seek-hits" aria-autocomplete="list" enterkeyhint="search">
       <button class="composer-go" type="submit" aria-label="搜索">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V6M6.5 11.5 12 6l5.5 5.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.6" cy="10.6" r="6.15" fill="none" stroke="currentColor" stroke-width="2.05"/><path d="M15.2 15.2 19.75 19.75" fill="none" stroke="currentColor" stroke-width="2.05" stroke-linecap="round"/></svg>
       </button>
       <div id="seek-hits" class="seek-hits" role="listbox" hidden></div>
     </form>
@@ -1197,12 +1205,8 @@ function paintRemote(slot, data) {
     ? `<div class="readme"><p class="muted">${when}</p>${renderReadme(data.readme, slot.dataset.repo || "")}</div>`
     : `<p class="muted">${when}。仓库没有可读取的 README。</p>`;
   slot.innerHTML = `${facts}${body}`;
-  const readme = slot.querySelector(".readme");
-  if (readme && readme.scrollHeight > 760) {
-    readme.classList.add("is-clipped");
-    slot.insertAdjacentHTML("beforeend", `<button type="button" class="btn btn-ghost readme-toggle" data-act="readme-more">展开全文</button>`);
-  }
 }
+
 
 async function loadRemote(plugin) {
   const slot = document.getElementById("repo-live");
@@ -1282,7 +1286,7 @@ async function syncNow() {
   syncing = true;
   setFresh("正在从四个源站同步…", cancelButton());
   try {
-    const { pullLive } = await import("./live.js?v=20261030g");
+    const { pullLive } = await import("./live.js?v=20261030m");
     const { items, stamps } = await pullLive((message) => setFresh(message, cancelButton()));
     const builtAt = new Date().toISOString();
     replaceItems(items, builtAt);
@@ -1325,7 +1329,7 @@ async function watchSources() {
       ? `构建于 ${day(manifest.builtAt) || "未知"}，已经不是最新。`
       : `构建于 ${day(manifest.builtAt) || "未知"}。源站有变化时可以马上同步。`, button);
   }
-  const { probeSources } = await import("./live.js?v=20261030g");
+  const { probeSources } = await import("./live.js?v=20261030m");
   const changed = await probeSources(manifest.upstream);
   if (syncing) return;
   if (changed.length) setFresh(`源站有更新：${changed.join("、")}。`, syncButton("立即同步"));
@@ -1558,11 +1562,6 @@ document.body.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-act]");
   if (!button || button.disabled) return;
   const act = button.dataset.act;
-  if (act === "readme-more") {
-    event.preventDefault();
-    document.querySelector(".readme")?.classList.remove("is-clipped");
-    button.remove();
-  }
   if (act === "hot-fold") {
     event.preventDefault();
     hotOpen = !hotOpen;
@@ -1636,7 +1635,7 @@ document.body.addEventListener("click", async (event) => {
   }
   if (act === "cancel-sync") {
     event.preventDefault();
-    const { cancelPull } = await import("./live.js?v=20261030g");
+    const { cancelPull } = await import("./live.js?v=20261030m");
     cancelPull();
   }
   if (act === "copy") {
@@ -1758,6 +1757,8 @@ document.body.addEventListener("drop", async (event) => {
 
 window.addEventListener("hashchange", () => { draw(); });
 window.addEventListener("resize", () => {
+  const top = document.querySelector(".top");
+  if (top) document.documentElement.style.setProperty("--top-h", `${Math.ceil(top.getBoundingClientRect().height)}px`);
   if (!document.body.classList.contains("is-market") || !document.getElementById("results")) return;
   clearTimeout(resizeTimer);
   resizeTimer = setTimeout(() => {
